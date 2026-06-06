@@ -22,7 +22,7 @@
     .edit-ch { opacity: 0; transition: opacity 0.15s; cursor: pointer; background: none; border: none; color: #6366f1; font-size: 13px; padding: 0 4px; min-width: 24px; }
     .chapter-row:hover .del-ch, .chapter-row:focus-within .del-ch { opacity: 1; }
     .chapter-row:hover .edit-ch, .chapter-row:focus-within .edit-ch { opacity: 1; }
-    .ch-edit-input { flex:1; background:#0f1827; border:1px solid #6366f1; border-radius:6px; color:#e2e8f0; font-size:14px; padding:2px 8px; font-family:'DM Sans',sans-serif; outline:none; min-width:0; }
+    .ch-edit-input { flex:1; background:#0f1827; border:1px solid #6366f1; border-radius:6px; color:#e2e8f0; font-size:13px; padding:2px 8px; font-family:'DM Sans',sans-serif; outline:none; min-width:0; }
     .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.82); z-index: 100; align-items: center; justify-content: center; padding: 16px; }
     .modal-overlay.active { display: flex; }
     .color-dot { width: 26px; height: 26px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: border 0.15s; flex-shrink: 0; }
@@ -43,7 +43,16 @@
     @keyframes slideUp { from { opacity:0; transform: translateY(30px); } to { opacity:1; transform: translateY(0); } }
     #toast { display: none; position: fixed; bottom: 22px; right: 18px; background: #1e293b; color: #e2e8f0; padding: 9px 16px; border-radius: 10px; font-size: 13px; animation: toastIn 0.2s ease; border: 1px solid #334155; z-index: 300; }
     #setup-modal .modal-inner { animation: slideUp 0.3s ease; }
-    .setup-scroll { display: flex; flex-direction: column; gap: 6px; }
+    .setup-scroll { display: flex; flex-direction: column; gap: 6px; max-height: 300px; overflow-y: auto; }
+    /* inline edit */
+    .pencil-btn { background:none; border:none; cursor:pointer; font-size:12px; color:#475569; padding:0 3px; opacity:0; transition:opacity 0.15s; }
+    .editable-wrap:hover .pencil-btn { opacity:1; }
+    .inline-edit-row { display:none; align-items:center; gap:5px; }
+    .inline-edit-input { background:#0f1827; border:1px solid #6366f1; border-radius:6px; color:#e2e8f0; padding:2px 8px; outline:none; font-family:'DM Sans',sans-serif; }
+    .save-btn { padding:2px 9px; border-radius:5px; border:none; background:#6366f1; color:#fff; font-size:12px; cursor:pointer; }
+    .cancel-btn { padding:2px 7px; border-radius:5px; border:1px solid #334155; background:transparent; color:#64748b; font-size:12px; cursor:pointer; }
+    /* stream badge bar */
+    .stream-bar { margin:8px 14px 0; background:#0b1120; border:1px solid #1e293b; border-radius:10px; padding:8px 14px; display:flex; align-items:center; justify-content:space-between; }
   </style>
 </head>
 <body>
@@ -54,6 +63,15 @@
     Study<span style="color:#6366f1;">Track</span>
   </div>
   <div style="font-size:11px;color:#475569;margin-top:1px;">Kerala Plus Two &middot; Chapter Progress</div>
+</div>
+
+<!-- Stream Bar -->
+<div class="stream-bar" id="stream-bar" style="display:none;">
+  <div style="display:flex;align-items:center;gap:8px;">
+    <span style="font-size:11px;color:#475569;">Stream:</span>
+    <span id="stream-badge" style="font-size:12px;font-weight:700;color:#a5b4fc;background:#1e1b4b;border-radius:6px;padding:2px 9px;"></span>
+  </div>
+  <button onclick="openChangeStreamModal()" style="padding:5px 11px;border-radius:8px;border:1px solid #334155;background:transparent;color:#94a3b8;font-size:12px;cursor:pointer;">✏️ Change Stream</button>
 </div>
 
 <!-- Subject Tabs -->
@@ -72,7 +90,17 @@
   <div style="background:#0b1120;border:1px solid #1e293b;border-radius:14px;padding:14px 16px;margin-bottom:14px;">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
       <div>
-        <div id="subject-title" style="font-family:'Playfair Display',serif;font-size:17px;font-weight:700;"></div>
+        <!-- Subject title with inline edit -->
+        <div class="editable-wrap" style="display:flex;align-items:center;gap:4px;">
+          <div id="subject-title" style="font-family:'Playfair Display',serif;font-size:17px;font-weight:700;"></div>
+          <button class="pencil-btn" onclick="startInlineSubjectEdit()" title="Rename">✏️</button>
+        </div>
+        <div class="inline-edit-row" id="subject-inline-edit" style="margin-top:2px;">
+          <input class="inline-edit-input" id="subject-inline-input" style="font-size:14px;font-weight:600;width:140px;"
+            onkeydown="if(event.key==='Enter')saveInlineSubject();if(event.key==='Escape')cancelInlineSubject();" />
+          <button class="save-btn" onclick="saveInlineSubject()">✓</button>
+          <button class="cancel-btn" onclick="cancelInlineSubject()">✕</button>
+        </div>
         <div id="chapter-count" style="font-size:11px;color:#475569;margin-top:2px;"></div>
       </div>
       <div style="text-align:right;">
@@ -107,7 +135,7 @@
     <div style="width:76px;font-size:10px;color:#f59e0b;font-weight:600;text-align:center;line-height:1.3;">🎬<br/>Watching</div>
     <div style="width:76px;font-size:10px;color:#22c55e;font-weight:600;text-align:center;line-height:1.3;">📖<br/>Self Study</div>
     <div style="width:76px;font-size:10px;color:#818cf8;font-weight:600;text-align:center;line-height:1.3;">🔄<br/>Revision</div>
-    <div style="width:28px;"></div>
+    <div style="width:52px;"></div>
   </div>
 
   <!-- Chapter List -->
@@ -115,8 +143,8 @@
 
   <!-- Add Chapter Form -->
   <div id="add-chapter-form" style="background:#0b1120;border:1px solid #334155;border-radius:10px;padding:10px 12px;gap:8px;align-items:center;margin-bottom:8px;">
-    <input id="new-chapter-input" placeholder="Chapter name..." style="flex:1;background:transparent;border:none;color:#e2e8f0;font-size:13px;min-width:0;" />
-    <button onclick="addChapter()" id="add-chapter-btn" style="padding:4px 14px;border-radius:7px;border:none;color:#fff;cursor:pointer;font-size:12px;white-space:nowrap;">Add</button>
+    <input id="new-chapter-input" placeholder="Chapter name..." style="flex:1;background:transparent;border:none;color:#e2e8f0;font-size:13px;min-width:0;" onkeydown="if(event.key==='Enter')addChapter();" />
+    <button onclick="addChapter()" style="padding:4px 14px;border-radius:7px;border:none;background:#6366f1;color:#fff;cursor:pointer;font-size:12px;white-space:nowrap;">Add</button>
     <button onclick="hideAddChapter()" style="padding:4px 9px;border-radius:7px;border:1px solid #334155;background:transparent;color:#64748b;cursor:pointer;font-size:12px;">✕</button>
   </div>
 
@@ -130,12 +158,11 @@
   </div>
 </div>
 
-<!-- SETUP MODAL -->
+<!-- ══ SETUP MODAL ══ -->
 <div id="setup-modal" class="modal-overlay active" style="align-items:flex-start;overflow-y:auto;padding:16px;">
   <div class="modal-inner" style="background:#0f1827;border:1px solid #1e293b;border-radius:18px;padding:22px;width:100%;max-width:340px;margin:auto;">
     <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:900;color:#f8fafc;margin-bottom:4px;">Welcome to StudyTrack</div>
     <div style="font-size:12px;color:#475569;margin-bottom:18px;">Kerala Plus Two &middot; Pick your stream</div>
-
     <div style="font-size:11px;color:#64748b;font-weight:600;letter-spacing:0.05em;margin-bottom:8px;">STREAM</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px;">
       <button class="stream-btn active" onclick="selectStream('science')" id="btn-science">Science</button>
@@ -143,20 +170,37 @@
       <button class="stream-btn" onclick="selectStream('cs')" id="btn-cs">Comp. Sci.</button>
       <button class="stream-btn" onclick="selectStream('commerce')" id="btn-commerce">Commerce</button>
     </div>
-
     <div style="font-size:11px;color:#64748b;font-weight:600;letter-spacing:0.05em;margin-bottom:8px;">SUBJECTS <span id="sel-count" style="color:#6366f1;font-weight:700;"></span></div>
     <div id="setup-subject-list" class="setup-scroll"></div>
-
-    <button onclick="finishSetup()" style="width:100%;margin-top:16px;padding:12px;border-radius:10px;border:none;background:#6366f1;color:#fff;font-size:14px;font-weight:600;cursor:pointer;">
-      Start Tracking →
-    </button>
+    <button onclick="finishSetup()" style="width:100%;margin-top:16px;padding:12px;border-radius:10px;border:none;background:#6366f1;color:#fff;font-size:14px;font-weight:600;cursor:pointer;">Start Tracking →</button>
     <div style="margin-top:10px;text-align:center;">
       <span onclick="skipSetup()" style="font-size:11px;color:#334155;cursor:pointer;text-decoration:underline;">Skip — start empty</span>
     </div>
   </div>
 </div>
 
-<!-- Edit Subject Modal -->
+<!-- ══ CHANGE STREAM MODAL ══ -->
+<div id="change-stream-modal" class="modal-overlay">
+  <div style="background:#0f1827;border:1px solid #1e293b;border-radius:18px;padding:22px;width:100%;max-width:340px;">
+    <div style="font-family:'Playfair Display',serif;font-size:18px;font-weight:900;color:#f8fafc;margin-bottom:6px;">Change Stream</div>
+    <div style="font-size:12px;color:#ef4444;margin-bottom:16px;background:#1a0a0a;border-radius:8px;padding:8px 10px;">⚠️ Changing stream will reset all subjects &amp; progress</div>
+    <div style="font-size:11px;color:#64748b;font-weight:600;letter-spacing:0.05em;margin-bottom:8px;">SELECT NEW STREAM</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px;">
+      <button class="stream-btn" onclick="selectChangeStream('science')" id="cbtn-science">Science</button>
+      <button class="stream-btn" onclick="selectChangeStream('bio')" id="cbtn-bio">Biology</button>
+      <button class="stream-btn" onclick="selectChangeStream('cs')" id="cbtn-cs">Comp. Sci.</button>
+      <button class="stream-btn" onclick="selectChangeStream('commerce')" id="cbtn-commerce">Commerce</button>
+    </div>
+    <div style="font-size:11px;color:#64748b;font-weight:600;letter-spacing:0.05em;margin-bottom:8px;">SUBJECTS <span id="change-sel-count" style="color:#6366f1;font-weight:700;"></span></div>
+    <div id="change-subject-list" class="setup-scroll"></div>
+    <div style="display:flex;gap:8px;margin-top:16px;">
+      <button onclick="closeChangeStreamModal()" style="flex:1;padding:10px;border-radius:8px;border:1px solid #1e293b;background:transparent;color:#64748b;cursor:pointer;">Cancel</button>
+      <button onclick="confirmChangeStream()" style="flex:1;padding:10px;border-radius:8px;border:none;background:#ef4444;color:#fff;font-weight:600;cursor:pointer;">Apply &amp; Reset</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ EDIT SUBJECT MODAL ══ -->
 <div id="edit-subject-modal" class="modal-overlay">
   <div style="background:#0f1827;border:1px solid #1e293b;border-radius:16px;padding:22px;width:100%;max-width:320px;">
     <div style="font-family:'Playfair Display',serif;font-size:17px;font-weight:700;margin-bottom:14px;">Rename Subject</div>
@@ -165,12 +209,12 @@
       style="width:100%;background:#080d18;border:1px solid #1e293b;border-radius:8px;padding:9px 12px;color:#e2e8f0;font-size:13px;margin-bottom:14px;" />
     <div style="display:flex;gap:8px;">
       <button onclick="closeEditSubjectModal()" style="flex:1;padding:9px;border-radius:8px;border:1px solid #1e293b;background:transparent;color:#64748b;cursor:pointer;">Cancel</button>
-      <button onclick="confirmEditSubject()" id="confirm-edit-subject" style="flex:1;padding:9px;border-radius:8px;border:none;color:#fff;cursor:pointer;font-weight:600;background:#6366f1;">Save</button>
+      <button onclick="confirmEditSubject()" style="flex:1;padding:9px;border-radius:8px;border:none;color:#fff;cursor:pointer;font-weight:600;background:#6366f1;">Save</button>
     </div>
   </div>
 </div>
 
-<!-- Add Subject Modal -->
+<!-- ══ ADD SUBJECT MODAL ══ -->
 <div id="add-subject-modal" class="modal-overlay">
   <div style="background:#0f1827;border:1px solid #1e293b;border-radius:16px;padding:22px;width:100%;max-width:320px;">
     <div style="font-family:'Playfair Display',serif;font-size:17px;font-weight:700;margin-bottom:14px;">New Subject</div>
@@ -178,11 +222,11 @@
       style="width:100%;background:#080d18;border:1px solid #1e293b;border-radius:8px;padding:9px 12px;color:#e2e8f0;font-size:13px;margin-bottom:12px;" />
     <div style="margin-bottom:14px;">
       <div style="font-size:11px;color:#64748b;margin-bottom:7px;">Color</div>
-      <div style="display:flex;gap:8px;" id="color-picker"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;" id="color-picker"></div>
     </div>
     <div style="display:flex;gap:8px;">
       <button onclick="closeSubjectModal()" style="flex:1;padding:9px;border-radius:8px;border:1px solid #1e293b;background:transparent;color:#64748b;cursor:pointer;">Cancel</button>
-      <button onclick="addSubject()" id="confirm-add-subject" style="flex:1;padding:9px;border-radius:8px;border:none;color:#fff;cursor:pointer;font-weight:600;">Add</button>
+      <button onclick="addSubject()" style="flex:1;padding:9px;border-radius:8px;border:none;color:#fff;cursor:pointer;font-weight:600;background:#6366f1;">Add</button>
     </div>
   </div>
 </div>
@@ -191,210 +235,234 @@
 
 <script>
 // ══════════════════════════════════════════════
-//  KERALA PLUS TWO SYLLABUS
+//  SYLLABUS
 // ══════════════════════════════════════════════
 const SYLLABUS = {
-  english: {
-    name: 'English', color: '#06b6d4',
+  english: { name: 'English', color: '#06b6d4',
     chapters: ['The Last Lesson','Lost Spring','Deep Water','The Rattrap','Indigo','Poets and Pancakes','The Interview','Going Places','My Mother at Sixty-six','An Elementary School Classroom in a Slum','Keeping Quiet','A Thing of Beauty','A Roadside Stand','Aunt Jennifer\'s Tigers','The Third Level','The Tiger King','Journey to the End of the Earth','The Enemy','Should Wizard Hit Mommy','On the Face of It','Evans Tries an O-level','Memories of Childhood']
   },
-  malayalam: {
-    name: 'Malayalam', color: '#f97316',
-    chapters: ['ഓർമ്മക്കുറിപ്പ്','ലേഖനം','ചെറുകഥ','കവിത','നോവൽ ഭാഗം','നാടകം','ഉപന്യാസം','ആത്മകഥ']
+  malayalam: { name: 'Malayalam', color: '#f97316',
+    chapters: ['ഓർമ്മക്കുറിപ്പ്','ലേഖനം','ചെറുകഥ','കവിത','നോവൽ ഭാഗം','നാടകം','ഉപന്യാസം','ആത്മകഥ','വിവർത്തനം','ഭാഷാശൈലി']
   },
-  physics: {
-    name: 'Physics', color: '#6366f1',
-    chapters: ['Electric Charges and Fields','Electrostatic Potential and Capacitance','Current Electricity','Moving Charges and Magnetism','Magnetism and Matter','Electromagnetic Induction','Alternating Current','Electromagnetic Waves','Ray Optics and Optical Instruments','Wave Optics','Dual Nature of Radiation and Matter','Atoms','Nuclei','Semiconductor Electronics: Materials, Devices and Circuits']
+  hindi: { name: 'Hindi', color: '#f43f5e',
+    chapters: ['आत्म-परिचय','पतंग','कविता के बहाने','बात सीधी थी पर','कैमरे में बंद अपाहिज','सहर्ष स्वीकारा है','उषा','कवितावली','लक्ष्मण-मूर्च्छा और राम का विलाप','रुबाइयाँ','गज़ल','भक्तिन','बाज़ार दर्शन','काले मेघा पानी दे','पहलवान की ढोलक','चार्ली चैप्लिन यानी हम सब','नमक','शिरीष के फूल','श्रम-विभाजन और जाति-प्रथा']
   },
-  chemistry: {
-    name: 'Chemistry', color: '#22c55e',
+  physics: { name: 'Physics', color: '#6366f1',
+    chapters: ['Electric Charges and Fields','Electrostatic Potential and Capacitance','Current Electricity','Moving Charges and Magnetism','Magnetism and Matter','Electromagnetic Induction','Alternating Current','Electromagnetic Waves','Ray Optics and Optical Instruments','Wave Optics','Dual Nature of Radiation and Matter','Atoms','Nuclei','Semiconductor Electronics']
+  },
+  chemistry: { name: 'Chemistry', color: '#22c55e',
     chapters: ['The Solid State','Solutions','Electrochemistry','Chemical Kinetics','Surface Chemistry','General Principles and Processes of Isolation of Elements','The p-Block Elements','The d- and f-Block Elements','Coordination Compounds','Haloalkanes and Haloarenes','Alcohols, Phenols and Ethers','Aldehydes, Ketones and Carboxylic Acids','Amines','Biomolecules','Polymers','Chemistry in Everyday Life']
   },
-  maths: {
-    name: 'Mathematics', color: '#ec4899',
+  maths: { name: 'Mathematics', color: '#ec4899',
     chapters: ['Relations and Functions','Inverse Trigonometric Functions','Matrices','Determinants','Continuity and Differentiability','Application of Derivatives','Integrals','Application of Integrals','Differential Equations','Vector Algebra','Three Dimensional Geometry','Linear Programming','Probability']
   },
-  biology: {
-    name: 'Biology', color: '#84cc16',
+  biology: { name: 'Biology', color: '#84cc16',
     chapters: ['Reproduction in Organisms','Sexual Reproduction in Flowering Plants','Human Reproduction','Reproductive Health','Principles of Inheritance and Variation','Molecular Basis of Inheritance','Evolution','Human Health and Disease','Strategies for Enhancement in Food Production','Microbes in Human Welfare','Biotechnology: Principles and Processes','Biotechnology and its Applications','Organisms and Populations','Ecosystem','Biodiversity and Conservation','Environmental Issues']
   },
-  cs: {
-    name: 'Computer Science', color: '#f59e0b',
+  cs: { name: 'Computer Science', color: '#f59e0b',
     chapters: ['Review of C++ Covered in Class XI','Object Oriented Programming in C++','Inheritance','Polymorphism','Pointers','Files in C++','Data Structures','Database and SQL','Boolean Algebra','Communication and Open Source Concepts']
   },
-  informatics: {
-    name: 'Informatics Practices', color: '#a78bfa',
-    chapters: ['Networking','Open Source Software','Database Concepts','SQL – Structured Query Language','Front-End Design (HTML)','More on HTML','Python Fundamentals','Conditional and Looping Constructs','Lists and Dictionaries','Societal Impacts of IT']
+  informatics: { name: 'Informatics Practices', color: '#a78bfa',
+    chapters: ['Networking','Open Source Software','Database Concepts','SQL','Front-End Design (HTML)','More on HTML','Python Fundamentals','Conditional and Looping Constructs','Lists and Dictionaries','Societal Impacts of IT']
   },
-  accountancy: {
-    name: 'Accountancy', color: '#f59e0b',
-    chapters: ['Accounting for Not-for-Profit Organisation','Accounting for Partnership: Basic Concepts','Reconstitution of a Partnership Firm – Admission of a Partner','Reconstitution of a Partnership Firm – Retirement/Death of a Partner','Dissolution of Partnership Firm','Accounting for Share Capital','Issue and Redemption of Debentures','Financial Statements of a Company','Analysis of Financial Statements','Accounting Ratios','Cash Flow Statement']
+  accountancy: { name: 'Accountancy', color: '#f59e0b',
+    chapters: ['Accounting for Not-for-Profit Organisation','Accounting for Partnership: Basic Concepts','Reconstitution – Admission of a Partner','Reconstitution – Retirement/Death of a Partner','Dissolution of Partnership Firm','Accounting for Share Capital','Issue and Redemption of Debentures','Financial Statements of a Company','Analysis of Financial Statements','Accounting Ratios','Cash Flow Statement']
   },
-  business: {
-    name: 'Business Studies', color: '#22c55e',
+  business: { name: 'Business Studies', color: '#22c55e',
     chapters: ['Nature and Significance of Management','Principles of Management','Business Environment','Planning','Organising','Staffing','Directing','Controlling','Financial Management','Financial Markets','Marketing Management','Consumer Protection','Entrepreneurship Development']
   },
-  economics: {
-    name: 'Economics', color: '#06b6d4',
-    chapters: ['Introduction to Macroeconomics','National Income Accounting','Money and Banking','Determination of Income and Employment','Government Budget and the Economy','Open Economy Macroeconomics','Indian Economy on the Eve of Independence','Indian Economy 1950–1990','Liberalisation, Privatisation and Globalisation','Poverty','Human Capital Formation in India','Rural Development','Employment: Growth, Informalisation and Other Issues','Infrastructure','Environment and Sustainable Development','Comparative Development Experiences of India and its Neighbours']
+  economics: { name: 'Economics', color: '#06b6d4',
+    chapters: ['Introduction to Macroeconomics','National Income Accounting','Money and Banking','Determination of Income and Employment','Government Budget and the Economy','Open Economy Macroeconomics','Indian Economy on the Eve of Independence','Indian Economy 1950–1990','Liberalisation, Privatisation and Globalisation','Poverty','Human Capital Formation in India','Rural Development','Employment: Growth, Informalisation and Other Issues','Infrastructure','Environment and Sustainable Development','Comparative Development Experiences']
   },
-  psychology: {
-    name: 'Psychology', color: '#f472b6',
+  psychology: { name: 'Psychology', color: '#f472b6',
     chapters: ['Variations in Psychological Attributes','Self and Personality','Meeting Life Challenges','Psychological Disorders','Therapeutic Approaches','Attitude and Social Cognition','Social Influence and Group Processes','Psychology and Life','Developing Psychological Skills']
   },
-  statistics: {
-    name: 'Statistics', color: '#34d399',
+  statistics: { name: 'Statistics', color: '#34d399',
     chapters: ['Introduction to Statistics','Collection of Data','Organisation of Data','Presentation of Data','Measures of Central Tendency','Measures of Dispersion','Correlation','Index Numbers','Use of Statistical Tools']
   }
 };
 
 const STREAMS = {
-  science:  { subjects: ['english','malayalam','physics','chemistry','maths','economics','statistics','psychology'] },
-  bio:      { subjects: ['english','malayalam','physics','chemistry','biology','psychology'] },
-  cs:       { subjects: ['english','malayalam','physics','chemistry','maths','cs','informatics'] },
-  commerce: { subjects: ['english','malayalam','accountancy','business','economics','maths','statistics','psychology'] }
+  science:  { label:'Science',    subjects:['english','malayalam','hindi','physics','chemistry','maths','economics','statistics','psychology'] },
+  bio:      { label:'Biology',    subjects:['english','malayalam','hindi','physics','chemistry','biology','psychology'] },
+  cs:       { label:'Comp. Sci.', subjects:['english','malayalam','hindi','physics','chemistry','maths','cs','informatics'] },
+  commerce: { label:'Commerce',   subjects:['english','malayalam','hindi','accountancy','business','economics','maths','statistics','psychology'] }
 };
 
 // ══════════════════════════════════════════════
 //  STATE
 // ══════════════════════════════════════════════
-const STORAGE_KEY = 'studytrack-v2';
-const COLORS = ['#6366f1','#ec4899','#f59e0b','#22c55e','#06b6d4','#f97316'];
+const STORAGE_KEY = 'studytrack-v4';
+const COLORS = ['#6366f1','#ec4899','#f59e0b','#22c55e','#06b6d4','#f97316','#f43f5e','#84cc16','#a78bfa','#34d399'];
 const STEPS = [
-  { key: 'watching',  color: '#f59e0b', bg: '#1a1200' },
-  { key: 'selfstudy', color: '#22c55e', bg: '#001a0a' },
-  { key: 'revision',  color: '#818cf8', bg: '#0d0a1a' }
+  { key:'watching',  color:'#f59e0b' },
+  { key:'selfstudy', color:'#22c55e' },
+  { key:'revision',  color:'#818cf8' }
 ];
 
-let state = { subjects: [], activeSubject: null };
-let selectedColor = '#6366f1';
+let state = { subjects:[], activeSubject:null, stream:null };
+let selectedColor = COLORS[0];
 let setupStream = 'science';
 let setupChecked = {};
+let changeStream = 'science';
+let changeChecked = {};
 
 function genId() { return Math.random().toString(36).slice(2,9); }
-
-function load() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      state = JSON.parse(raw);
-      document.getElementById('setup-modal').classList.remove('active');
-      render();
-    } else {
-      initSetupModal();
-    }
-  } catch(e) { initSetupModal(); }
-}
-
 function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
-
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.style.display = 'block';
-  clearTimeout(t._tmr);
-  t._tmr = setTimeout(() => t.style.display = 'none', 2200);
-}
+function load() { try { const r=localStorage.getItem(STORAGE_KEY); if(r) state=JSON.parse(r); } catch(e){} }
 
 // ══════════════════════════════════════════════
-//  SETUP MODAL
+//  SETUP
 // ══════════════════════════════════════════════
-function initSetupModal() {
-  setupStream = 'science';
-  setupChecked = {};
-  STREAMS.science.subjects.forEach(k => setupChecked[k] = true);
-  renderSetupSubjects();
-}
-
 function selectStream(s) {
   setupStream = s;
-  ['science','bio','cs','commerce'].forEach(x => document.getElementById('btn-'+x).classList.remove('active'));
-  document.getElementById('btn-'+s).classList.add('active');
+  ['science','bio','cs','commerce'].forEach(k => document.getElementById('btn-'+k).classList.toggle('active', k===s));
   setupChecked = {};
-  STREAMS[s].subjects.forEach(k => setupChecked[k] = true);
-  renderSetupSubjects();
+  STREAMS[s].subjects.forEach(k => { setupChecked[k]=true; });
+  renderSetupList();
 }
 
-function renderSetupSubjects() {
+function renderSetupList() {
   const list = document.getElementById('setup-subject-list');
-  list.innerHTML = '';
-  STREAMS[setupStream].subjects.forEach(k => {
-    const sub = SYLLABUS[k];
-    const checked = !!setupChecked[k];
-    const div = document.createElement('div');
-    div.className = 'setup-subject-check' + (checked ? ' checked' : '');
-    div.innerHTML = `<div class="check-box">${checked ? '✓' : ''}</div><span style="width:11px;height:11px;border-radius:50%;background:${sub.color};flex-shrink:0;display:inline-block;"></span><span style="font-size:13px;color:#e2e8f0;flex:1;">${sub.name}</span><span style="font-size:11px;color:#475569;">${sub.chapters.length} ch</span>`;
-    div.onclick = () => { setupChecked[k] = !setupChecked[k]; renderSetupSubjects(); };
-    list.appendChild(div);
-  });
-  const count = Object.values(setupChecked).filter(Boolean).length;
-  document.getElementById('sel-count').textContent = count ? '(' + count + ' selected)' : '';
+  list.innerHTML = STREAMS[setupStream].subjects.map(k => {
+    const s = SYLLABUS[k]; const checked = !!setupChecked[k];
+    return `<div class="setup-subject-check ${checked?'checked':''}" onclick="toggleSetup('${k}')">
+      <div class="check-box">${checked?'✓':''}</div>
+      <div style="width:10px;height:10px;border-radius:50%;background:${s.color};flex-shrink:0;"></div>
+      <div style="font-size:13px;">${s.name}</div>
+    </div>`;
+  }).join('');
+  const n = Object.values(setupChecked).filter(Boolean).length;
+  document.getElementById('sel-count').textContent = n ? `(${n})` : '';
 }
+
+function toggleSetup(k) { setupChecked[k]=!setupChecked[k]; renderSetupList(); }
 
 function finishSetup() {
-  const keys = Object.entries(setupChecked).filter(([,v]) => v).map(([k]) => k);
-  if (!keys.length) { showToast('Select at least one subject'); return; }
-  state.subjects = keys.map(k => ({
-    id: genId(), name: SYLLABUS[k].name, color: SYLLABUS[k].color,
-    chapters: SYLLABUS[k].chapters.map(name => ({ id: genId(), name, steps: { watching: null, selfstudy: null, revision: null } }))
-  }));
-  state.activeSubject = state.subjects[0]?.id || null;
-  save();
-  document.getElementById('setup-modal').classList.remove('active');
-  render();
-  showToast('All chapters loaded! Let\'s go 🚀');
+  state.subjects=[]; state.activeSubject=null; state.stream=setupStream;
+  STREAMS[setupStream].subjects.forEach(k => {
+    if(setupChecked[k]) state.subjects.push({ id:genId(), name:SYLLABUS[k].name, color:SYLLABUS[k].color,
+      chapters: SYLLABUS[k].chapters.map(c=>({id:genId(),name:c,watching:false,selfstudy:false,revision:false})) });
+  });
+  if(state.subjects.length) state.activeSubject=0;
+  save(); document.getElementById('setup-modal').classList.remove('active'); renderAll();
 }
 
 function skipSetup() {
-  state = { subjects: [], activeSubject: null };
-  save();
-  document.getElementById('setup-modal').classList.remove('active');
-  render();
+  state.stream=setupStream;
+  document.getElementById('setup-modal').classList.remove('active'); renderAll();
 }
 
 // ══════════════════════════════════════════════
-//  SUBJECT MODAL
+//  CHANGE STREAM MODAL
 // ══════════════════════════════════════════════
-function buildColorPicker() {
-  const cp = document.getElementById('color-picker');
-  cp.innerHTML = '';
-  COLORS.forEach(c => {
-    const d = document.createElement('div');
-    d.className = 'color-dot' + (c === selectedColor ? ' selected' : '');
-    d.style.background = c;
-    d.onclick = () => { selectedColor = c; buildColorPicker(); document.getElementById('confirm-add-subject').style.background = c; };
-    cp.appendChild(d);
+function openChangeStreamModal() {
+  changeStream = state.stream || 'science';
+  changeChecked = {};
+  STREAMS[changeStream].subjects.forEach(k => { changeChecked[k]=true; });
+  ['science','bio','cs','commerce'].forEach(k => document.getElementById('cbtn-'+k).classList.toggle('active', k===changeStream));
+  renderChangeList();
+  document.getElementById('change-stream-modal').classList.add('active');
+}
+
+function closeChangeStreamModal() { document.getElementById('change-stream-modal').classList.remove('active'); }
+
+function selectChangeStream(s) {
+  changeStream = s;
+  changeChecked = {};
+  STREAMS[s].subjects.forEach(k => { changeChecked[k]=true; });
+  ['science','bio','cs','commerce'].forEach(k => document.getElementById('cbtn-'+k).classList.toggle('active', k===s));
+  renderChangeList();
+}
+
+function renderChangeList() {
+  const list = document.getElementById('change-subject-list');
+  list.innerHTML = STREAMS[changeStream].subjects.map(k => {
+    const s = SYLLABUS[k]; const checked = !!changeChecked[k];
+    return `<div class="setup-subject-check ${checked?'checked':''}" onclick="toggleChange('${k}')">
+      <div class="check-box">${checked?'✓':''}</div>
+      <div style="width:10px;height:10px;border-radius:50%;background:${s.color};flex-shrink:0;"></div>
+      <div style="font-size:13px;">${s.name}</div>
+    </div>`;
+  }).join('');
+  const n = Object.values(changeChecked).filter(Boolean).length;
+  document.getElementById('change-sel-count').textContent = n ? `(${n})` : '';
+}
+
+function toggleChange(k) { changeChecked[k]=!changeChecked[k]; renderChangeList(); }
+
+function confirmChangeStream() {
+  state.subjects=[]; state.activeSubject=null; state.stream=changeStream;
+  STREAMS[changeStream].subjects.forEach(k => {
+    if(changeChecked[k]) state.subjects.push({ id:genId(), name:SYLLABUS[k].name, color:SYLLABUS[k].color,
+      chapters: SYLLABUS[k].chapters.map(c=>({id:genId(),name:c,watching:false,selfstudy:false,revision:false})) });
   });
-  document.getElementById('confirm-add-subject').style.background = selectedColor;
+  if(state.subjects.length) state.activeSubject=0;
+  save(); closeChangeStreamModal(); renderAll(); showToast('Stream changed!');
 }
 
-function openSubjectModal() {
-  selectedColor = COLORS[state.subjects.length % COLORS.length];
-  buildColorPicker();
-  document.getElementById('new-subject-input').value = '';
+// ══════════════════════════════════════════════
+//  SUBJECTS
+// ══════════════════════════════════════════════
+function openAddSubjectModal() {
+  selectedColor=COLORS[0]; renderColorPicker();
+  document.getElementById('new-subject-input').value='';
   document.getElementById('add-subject-modal').classList.add('active');
-  setTimeout(() => document.getElementById('new-subject-input').focus(), 100);
+  setTimeout(()=>document.getElementById('new-subject-input').focus(),100);
 }
-
 function closeSubjectModal() { document.getElementById('add-subject-modal').classList.remove('active'); }
+function renderColorPicker() {
+  document.getElementById('color-picker').innerHTML = COLORS.map(c=>
+    `<div class="color-dot ${c===selectedColor?'selected':''}" style="background:${c};" onclick="selectColor('${c}')"></div>`).join('');
+}
+function selectColor(c) { selectedColor=c; renderColorPicker(); }
 
 function addSubject() {
-  const name = document.getElementById('new-subject-input').value.trim();
-  if (!name) return;
-  const sub = { id: genId(), name, color: selectedColor, chapters: [] };
-  state.subjects.push(sub);
-  state.activeSubject = sub.id;
-  save(); closeSubjectModal(); render();
-  showToast('Subject added!');
+  const name=document.getElementById('new-subject-input').value.trim();
+  if(!name){showToast('Enter a name first');return;}
+  state.subjects.push({id:genId(),name,color:selectedColor,chapters:[]});
+  state.activeSubject=state.subjects.length-1;
+  save(); closeSubjectModal(); renderAll(); showToast('Subject added');
 }
 
-function switchSubject(id) { state.activeSubject = id; save(); render(); }
-
 function deleteSubject() {
-  if (!confirm('Delete this subject and all its chapters?')) return;
-  state.subjects = state.subjects.filter(s => s.id !== state.activeSubject);
-  state.activeSubject = state.subjects.length > 0 ? state.subjects[0].id : null;
-  save(); render();
+  if(state.activeSubject===null) return;
+  if(!confirm('Delete this subject and all its progress?')) return;
+  state.subjects.splice(state.activeSubject,1);
+  state.activeSubject=state.subjects.length ? Math.max(0,state.activeSubject-1) : null;
+  save(); renderAll(); showToast('Deleted');
+}
+
+function openEditSubjectModal() {
+  if(state.activeSubject===null) return;
+  document.getElementById('edit-subject-input').value=state.subjects[state.activeSubject].name;
+  document.getElementById('edit-subject-modal').classList.add('active');
+  setTimeout(()=>document.getElementById('edit-subject-input').focus(),100);
+}
+function closeEditSubjectModal() { document.getElementById('edit-subject-modal').classList.remove('active'); }
+function confirmEditSubject() {
+  const name=document.getElementById('edit-subject-input').value.trim();
+  if(!name) return;
+  state.subjects[state.activeSubject].name=name;
+  save(); closeEditSubjectModal(); renderAll(); showToast('Renamed');
+}
+
+// Inline edit subject title
+function startInlineSubjectEdit() {
+  if(state.activeSubject===null) return;
+  document.getElementById('subject-inline-input').value=state.subjects[state.activeSubject].name;
+  document.getElementById('subject-title').parentElement.style.display='none';
+  const row=document.getElementById('subject-inline-edit');
+  row.style.display='flex'; row.querySelector('input').focus();
+}
+function saveInlineSubject() {
+  const v=document.getElementById('subject-inline-input').value.trim();
+  if(v && state.activeSubject!==null){ state.subjects[state.activeSubject].name=v; save(); showToast('Renamed'); }
+  cancelInlineSubject(); renderAll();
+}
+function cancelInlineSubject() {
+  document.getElementById('subject-title').parentElement.style.display='';
+  document.getElementById('subject-inline-edit').style.display='none';
 }
 
 // ══════════════════════════════════════════════
@@ -402,196 +470,160 @@ function deleteSubject() {
 // ══════════════════════════════════════════════
 function showAddChapter() {
   document.getElementById('add-chapter-form').classList.add('active');
-  document.getElementById('show-add-chapter-btn').style.display = 'none';
-  setTimeout(() => document.getElementById('new-chapter-input').focus(), 100);
+  document.getElementById('show-add-chapter-btn').style.display='none';
+  document.getElementById('new-chapter-input').value='';
+  document.getElementById('new-chapter-input').focus();
 }
-
 function hideAddChapter() {
   document.getElementById('add-chapter-form').classList.remove('active');
-  document.getElementById('show-add-chapter-btn').style.display = 'block';
-  document.getElementById('new-chapter-input').value = '';
+  document.getElementById('show-add-chapter-btn').style.display='';
 }
-
 function addChapter() {
-  const name = document.getElementById('new-chapter-input').value.trim();
-  if (!name || !state.activeSubject) return;
-  const ch = { id: genId(), name, steps: { watching: null, selfstudy: null, revision: null } };
-  const sub = state.subjects.find(s => s.id === state.activeSubject);
-  if (sub) sub.chapters.push(ch);
-  save(); hideAddChapter(); renderChapters();
-  showToast('Chapter added!');
+  const name=document.getElementById('new-chapter-input').value.trim();
+  if(!name || state.activeSubject===null) return;
+  state.subjects[state.activeSubject].chapters.push({id:genId(),name,watching:false,selfstudy:false,revision:false});
+  save(); hideAddChapter(); renderChapters(); updateStats(); showToast('Chapter added');
 }
-
-document.getElementById('new-chapter-input').addEventListener('keydown', e => {
-  if (e.key === 'Enter') addChapter();
-  if (e.key === 'Escape') hideAddChapter();
-});
-
-function toggleStep(chapterId, stepKey) {
-  const cycle = v => v === null ? true : v === true ? false : null;
-  const sub = state.subjects.find(s => s.id === state.activeSubject);
-  if (!sub) return;
-  const ch = sub.chapters.find(c => c.id === chapterId);
-  if (!ch) return;
-  ch.steps[stepKey] = cycle(ch.steps[stepKey]);
-  save(); renderChapters(); renderProgress();
-}
-
 function deleteChapter(id) {
-  const sub = state.subjects.find(s => s.id === state.activeSubject);
-  if (!sub) return;
-  sub.chapters = sub.chapters.filter(c => c.id !== id);
-  save(); renderChapters(); renderProgress();
+  if(state.activeSubject===null) return;
+  state.subjects[state.activeSubject].chapters=state.subjects[state.activeSubject].chapters.filter(c=>c.id!==id);
+  save(); renderChapters(); updateStats(); showToast('Deleted');
+}
+function toggleStep(id,step) {
+  const ch=state.subjects[state.activeSubject].chapters.find(c=>c.id===id);
+  if(ch){ch[step]=!ch[step]; save(); renderChapters(); updateStats();}
+}
+function startEditChapter(id) {
+  const row=document.getElementById('ch-row-'+id);
+  row.querySelector('.ch-name').style.display='none';
+  row.querySelector('.ch-edit-row').style.display='flex';
+  row.querySelector('.ch-edit-input').focus();
+}
+function saveEditChapter(id) {
+  const row=document.getElementById('ch-row-'+id);
+  const v=row.querySelector('.ch-edit-input').value.trim();
+  if(v && state.activeSubject!==null){
+    const ch=state.subjects[state.activeSubject].chapters.find(c=>c.id===id);
+    if(ch){ch.name=v; save(); showToast('Renamed');}
+  }
+  cancelEditChapter(id); renderChapters();
+}
+function cancelEditChapter(id) {
+  const row=document.getElementById('ch-row-'+id);
+  if(!row) return;
+  row.querySelector('.ch-name').style.display='';
+  row.querySelector('.ch-edit-row').style.display='none';
 }
 
 // ══════════════════════════════════════════════
 //  RENDER
 // ══════════════════════════════════════════════
-function renderSubjectTabs() {
-  const container = document.getElementById('subject-tabs');
-  container.innerHTML = '';
-  state.subjects.forEach(s => {
-    const d = document.createElement('div');
-    d.className = 'subject-tab';
-    const isActive = state.activeSubject === s.id;
-    d.style.cssText = `display:inline-flex;align-items:center;gap:5px;padding:5px 13px;border-radius:20px;flex-shrink:0;background:${isActive?'#1e293b':'transparent'};border:1.5px solid ${isActive?s.color:'#1e293b'};color:${isActive?'#f8fafc':'#64748b'};font-size:12px;font-weight:500;`;
-    d.innerHTML = `<span style="width:7px;height:7px;border-radius:50%;background:${s.color};flex-shrink:0;display:inline-block;"></span>${s.name}`;
-    d.onclick = () => switchSubject(s.id);
-    container.appendChild(d);
-  });
-  const addBtn = document.createElement('div');
-  addBtn.className = 'subject-tab';
-  addBtn.style.cssText = 'display:inline-flex;align-items:center;padding:5px 12px;border-radius:20px;border:1.5px dashed #334155;color:#475569;font-size:12px;flex-shrink:0;';
-  addBtn.textContent = '+ Subject';
-  addBtn.onclick = openSubjectModal;
-  container.appendChild(addBtn);
+function renderAll() { renderTabs(); renderSubjectContent(); renderStreamBar(); }
+
+function renderStreamBar() {
+  const bar=document.getElementById('stream-bar');
+  if(state.stream){ bar.style.display='flex'; document.getElementById('stream-badge').textContent=STREAMS[state.stream]?.label||state.stream; }
+  else bar.style.display='none';
 }
 
-function renderProgress() {
-  const sub = state.subjects.find(s => s.id === state.activeSubject);
-  if (!sub) return;
-  const chs = sub.chapters;
-  const total     = chs.length;
-  const watching  = chs.filter(c => c.steps.watching  === true).length;
-  const selfstudy = chs.filter(c => c.steps.selfstudy === true).length;
-  const revision  = chs.filter(c => c.steps.revision  === true).length;
-  const pct       = total > 0 ? Math.round((revision / total) * 100) : 0;
-  document.getElementById('subject-title').textContent    = sub.name;
-  document.getElementById('chapter-count').textContent    = total + ' chapters';
-  document.getElementById('progress-pct').textContent     = pct + '%';
-  document.getElementById('progress-pct').style.color     = sub.color;
-  document.getElementById('progress-bar').style.width     = pct + '%';
-  document.getElementById('progress-bar').style.background = `linear-gradient(90deg,${sub.color},${sub.color}99)`;
-  document.getElementById('stat-watching').textContent    = watching;
-  document.getElementById('stat-selfstudy').textContent   = selfstudy;
-  document.getElementById('stat-revision').textContent    = revision;
-  document.getElementById('add-chapter-btn').style.background = sub.color;
+function renderTabs() {
+  const c=document.getElementById('subject-tabs'); c.innerHTML='';
+  state.subjects.forEach((sub,i)=>{
+    const tab=document.createElement('div');
+    tab.className='subject-tab';
+    const active=i===state.activeSubject;
+    tab.style.cssText=`padding:6px 12px;border-radius:20px;font-size:12px;font-weight:600;white-space:nowrap;border:1.5px solid ${active?sub.color:'#1e293b'};background:${active?sub.color+'22':'transparent'};color:${active?sub.color:'#475569'};`;
+    tab.textContent=sub.name;
+    tab.onclick=()=>{state.activeSubject=i;save();renderAll();};
+    c.appendChild(tab);
+  });
+  const add=document.createElement('div');
+  add.className='subject-tab';
+  add.style.cssText='padding:6px 12px;border-radius:20px;font-size:12px;font-weight:600;white-space:nowrap;border:1.5px dashed #334155;color:#475569;';
+  add.textContent='+';
+  add.onclick=openAddSubjectModal;
+  c.appendChild(add);
+}
+
+function renderSubjectContent() {
+  if(!state.subjects.length || state.activeSubject===null){
+    document.getElementById('main-content').style.display='none';
+    document.getElementById('no-subject-state').style.display='block'; return;
+  }
+  document.getElementById('no-subject-state').style.display='none';
+  document.getElementById('main-content').style.display='block';
+  document.getElementById('subject-title').textContent=state.subjects[state.activeSubject].name;
+  // reset inline edit
+  document.getElementById('subject-title').parentElement.style.display='';
+  document.getElementById('subject-inline-edit').style.display='none';
+  renderChapters(); updateStats();
 }
 
 function renderChapters() {
-  const sub  = state.subjects.find(s => s.id === state.activeSubject);
-  const list = document.getElementById('chapter-list');
-  list.innerHTML = '';
-  if (!sub || !sub.chapters.length) {
-    list.innerHTML = '<div style="text-align:center;color:#334155;padding:20px 0;font-size:13px;">No chapters yet</div>';
-    return;
-  }
-  sub.chapters.forEach((ch, i) => {
-    const row = document.createElement('div');
-    row.className = 'chapter-row';
-    row.style.cssText = 'background:#0b1120;border:1px solid #1e293b;border-radius:10px;padding:10px 12px;';
-    const done = ch.steps.revision === true;
-    const topRow = document.createElement('div');
-    topRow.style.cssText = 'display:flex;align-items:center;gap:7px;margin-bottom:8px;';
-    topRow.innerHTML = `<span style="font-size:11px;color:#334155;flex-shrink:0;">${i+1}</span><span style="font-size:13px;color:${done?'#475569':'#e2e8f0'};text-decoration:${done?'line-through':'none'};flex:1;word-break:break-word;">${ch.name}</span>`;
-    const editBtn = document.createElement('button');
-    editBtn.className = 'edit-ch';
-    editBtn.textContent = '✏️';
-    editBtn.style.cssText = 'opacity:0;cursor:pointer;background:none;border:none;font-size:12px;flex-shrink:0;padding:0 2px;';
-    editBtn.onclick = () => startEditChapter(ch.id, row);
-    const delBtn = document.createElement('button');
-    delBtn.className = 'del-ch';
-    delBtn.textContent = '✕';
-    delBtn.style.cssText = 'opacity:0;cursor:pointer;background:none;border:none;color:#ef4444;font-size:14px;flex-shrink:0;padding:0 2px;';
-    delBtn.onclick = () => deleteChapter(ch.id);
-    topRow.appendChild(editBtn);
-    topRow.appendChild(delBtn);
-    row.appendChild(topRow);
-    const stepsRow = document.createElement('div');
-    stepsRow.style.cssText = 'display:flex;gap:5px;';
-    STEPS.forEach(step => {
-      const val = ch.steps[step.key];
-      const isDone = val === true, isSkip = val === false;
-      const cell = document.createElement('div');
-      cell.className = 'step-check';
-      cell.style.cssText = `flex:1;display:flex;align-items:center;justify-content:center;height:36px;border-radius:8px;background:${isDone?step.bg:isSkip?'#1a0a0a':'#0a0f1a'};border:1.5px solid ${isDone?step.color:isSkip?'#ef444466':'#1e293b'};`;
-      cell.innerHTML = isDone ? `<span style="color:${step.color};font-size:15px;font-weight:700;">✓</span>` : isSkip ? `<span style="color:#ef4444;font-size:15px;font-weight:700;">✗</span>` : `<span style="color:#334155;font-size:15px;">○</span>`;
-      cell.onclick = () => toggleStep(ch.id, step.key);
-      stepsRow.appendChild(cell);
-    });
-    row.appendChild(stepsRow);
-    list.appendChild(row);
+  if(state.activeSubject===null) return;
+  const sub=state.subjects[state.activeSubject];
+  document.getElementById('chapter-list').innerHTML=sub.chapters.map((ch,idx)=>{
+    const done=ch.watching&&ch.selfstudy&&ch.revision;
+    const stepBtns=STEPS.map(step=>{
+      const a=ch[step.key];
+      return `<div class="step-check" onclick="toggleStep('${ch.id}','${step.key}')"
+        style="width:70px;padding:7px 0;border-radius:8px;text-align:center;font-size:11px;font-weight:600;
+        background:${a?step.color+'22':'#0b1120'};color:${a?step.color:'#334155'};
+        border:1.5px solid ${a?step.color:'#1e293b'};transition:all 0.18s;">${a?'✓':'○'}</div>`;
+    }).join('');
+    const safeN=ch.name.replace(/"/g,'&quot;').replace(/</g,'&lt;');
+    return `<div class="chapter-row" id="ch-row-${ch.id}"
+      style="display:flex;align-items:center;gap:6px;background:#0b1120;border:1px solid ${done?'#22c55e33':'#1e293b'};border-radius:10px;padding:9px 10px;">
+      <div style="width:18px;min-width:18px;height:18px;border-radius:50%;background:#1e293b;display:flex;align-items:center;justify-content:center;font-size:9px;color:#475569;font-weight:700;">${idx+1}</div>
+      <div class="ch-name" style="flex:1;font-size:13px;color:${done?'#22c55e':'#cbd5e1'};min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${safeN}">${safeN}</div>
+      <div class="ch-edit-row inline-edit-row" style="flex:1;">
+        <input class="ch-edit-input" value="${safeN}"
+          onkeydown="if(event.key==='Enter')saveEditChapter('${ch.id}');if(event.key==='Escape')cancelEditChapter('${ch.id}');" />
+        <button class="save-btn" onclick="saveEditChapter('${ch.id}')">✓</button>
+        <button class="cancel-btn" onclick="cancelEditChapter('${ch.id}')">✕</button>
+      </div>
+      ${stepBtns}
+      <button class="edit-ch" onclick="startEditChapter('${ch.id}')" title="Edit chapter">✏️</button>
+      <button class="del-ch" onclick="deleteChapter('${ch.id}')">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function updateStats() {
+  if(state.activeSubject===null) return;
+  const sub=state.subjects[state.activeSubject];
+  let w=0,s=0,r=0,done=0;
+  sub.chapters.forEach(ch=>{
+    if(ch.watching)w++; if(ch.selfstudy)s++; if(ch.revision)r++;
+    if(ch.watching&&ch.selfstudy&&ch.revision)done++;
   });
+  const n=sub.chapters.length, pct=n?Math.round(done/n*100):0;
+  document.getElementById('chapter-count').textContent=`${n} chapter${n!==1?'s':''}`;
+  document.getElementById('progress-pct').textContent=pct+'%';
+  document.getElementById('progress-pct').style.color=pct===100?'#22c55e':pct>50?'#818cf8':'#e2e8f0';
+  document.getElementById('progress-bar').style.width=pct+'%';
+  document.getElementById('progress-bar').style.background=pct===100?'#22c55e':sub.color;
+  document.getElementById('stat-watching').textContent=w;
+  document.getElementById('stat-selfstudy').textContent=s;
+  document.getElementById('stat-revision').textContent=r;
 }
 
-function render() {
-  if (!state.subjects.find(s => s.id === state.activeSubject))
-    state.activeSubject = state.subjects.length > 0 ? state.subjects[0].id : null;
-  renderSubjectTabs();
-  const hasSub = !!state.subjects.find(s => s.id === state.activeSubject);
-  document.getElementById('no-subject-state').style.display = hasSub ? 'none' : 'block';
-  document.getElementById('main-content').style.display     = hasSub ? 'block' : 'none';
-  if (hasSub) { renderProgress(); renderChapters(); }
-  hideAddChapter();
+// ══════════════════════════════════════════════
+//  TOAST
+// ══════════════════════════════════════════════
+let toastTimer;
+function showToast(msg) {
+  const el=document.getElementById('toast'); el.textContent=msg; el.style.display='block';
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>{el.style.display='none';},2000);
 }
 
-// ── Edit Subject ──────────────────────────────
-function openEditSubjectModal() {
-  const sub = state.subjects.find(s => s.id === state.activeSubject);
-  if (!sub) return;
-  document.getElementById('edit-subject-input').value = sub.name;
-  document.getElementById('confirm-edit-subject').style.background = sub.color;
-  document.getElementById('edit-subject-modal').classList.add('active');
-  setTimeout(() => { const i = document.getElementById('edit-subject-input'); i.focus(); i.select(); }, 100);
+// ══════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════
+load(); renderColorPicker(); selectStream('science');
+if(state.subjects.length || state.stream){
+  document.getElementById('setup-modal').classList.remove('active'); renderAll();
 }
-function closeEditSubjectModal() { document.getElementById('edit-subject-modal').classList.remove('active'); }
-function confirmEditSubject() {
-  const name = document.getElementById('edit-subject-input').value.trim();
-  if (!name) return;
-  const sub = state.subjects.find(s => s.id === state.activeSubject);
-  if (sub) { sub.name = name; save(); closeEditSubjectModal(); render(); showToast('Renamed!'); }
-}
-
-// ── Edit Chapter inline ───────────────────────
-function startEditChapter(chapterId, rowEl) {
-  const sub = state.subjects.find(s => s.id === state.activeSubject);
-  if (!sub) return;
-  const ch = sub.chapters.find(c => c.id === chapterId);
-  if (!ch) return;
-  const topRow   = rowEl.querySelector('div');
-  const nameSpan = topRow.querySelectorAll('span')[1];
-  if (!nameSpan) return;
-  const inp = document.createElement('input');
-  inp.className = 'ch-edit-input';
-  inp.value = ch.name;
-  topRow.replaceChild(inp, nameSpan);
-  inp.focus(); inp.select();
-  topRow.querySelectorAll('button').forEach(b => b.style.display = 'none');
-  const saveBtn   = document.createElement('button');
-  saveBtn.textContent = '✓';
-  saveBtn.style.cssText = 'background:#6366f1;border:none;color:#fff;border-radius:6px;padding:3px 10px;cursor:pointer;font-size:14px;flex-shrink:0;';
-  const cancelBtn = document.createElement('button');
-  cancelBtn.textContent = '✕';
-  cancelBtn.style.cssText = 'background:transparent;border:1px solid #334155;color:#64748b;border-radius:6px;padding:3px 8px;cursor:pointer;font-size:13px;flex-shrink:0;';
-  topRow.appendChild(saveBtn);
-  topRow.appendChild(cancelBtn);
-  const confirm = () => { const n = inp.value.trim(); if (n) { ch.name = n; save(); } renderChapters(); showToast('Renamed!'); };
-  const cancel  = () => renderChapters();
-  saveBtn.onclick = confirm; cancelBtn.onclick = cancel;
-  inp.addEventListener('keydown', e => { if (e.key === 'Enter') confirm(); if (e.key === 'Escape') cancel(); });
-}
-
-document.addEventListener("DOMContentLoaded", load);
 </script>
 </body>
 </html>
