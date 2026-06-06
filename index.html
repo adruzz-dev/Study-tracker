@@ -19,7 +19,11 @@
     .step-check:active { transform: scale(0.92); }
     .chapter-row { animation: fadeIn 0.2s ease; }
     .del-ch { opacity: 0; transition: opacity 0.15s; cursor: pointer; background: none; border: none; color: #ef4444; font-size: 15px; padding: 0 4px; min-width: 24px; }
+    .edit-ch { opacity: 0; transition: opacity 0.15s; cursor: pointer; background: none; border: none; color: #6366f1; font-size: 13px; padding: 0 4px; min-width: 24px; }
     .chapter-row:hover .del-ch, .chapter-row:focus-within .del-ch { opacity: 1; }
+    .chapter-row:hover .edit-ch, .chapter-row:focus-within .edit-ch { opacity: 1; }
+    .ch-edit-input { flex:1; background:#0f1827; border:1px solid #6366f1; border-radius:6px; color:#e2e8f0; font-size:14px; padding:2px 8px; font-family:'DM Sans',sans-serif; outline:none; min-width:0; }
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 100; align-items: center; justify-content: center; padding: 20px; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes toastIn { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
     #toast { display: none; position: fixed; bottom: 22px; right: 18px; background: #1e293b; color: #e2e8f0; padding: 9px 16px; border-radius: 10px; font-size: 13px; animation: toastIn 0.2s ease; border: 1px solid #334155; z-index: 200; }
@@ -112,8 +116,22 @@
     + Add Chapter
   </button>
 
-  <div style="margin-top:18px;text-align:center;">
+  <div style="margin-top:18px;text-align:center;display:flex;justify-content:center;gap:18px;">
+    <span onclick="openEditSubjectModal()" style="font-size:11px;color:#6366f1;cursor:pointer;text-decoration:underline;">✏️ Rename subject</span>
     <span onclick="deleteSubject()" style="font-size:11px;color:#334155;cursor:pointer;text-decoration:underline;">Delete this subject</span>
+  </div>
+</div>
+
+<!-- Edit Subject Modal -->
+<div id="edit-subject-modal" class="modal-overlay">
+  <div style="background:#0f1827;border:1px solid #1e293b;border-radius:16px;padding:22px;width:100%;max-width:320px;">
+    <div style="font-family:'Playfair Display',serif;font-size:17px;font-weight:700;margin-bottom:14px;">Edit Subject</div>
+    <input id="edit-subject-input" placeholder="Subject name..." onkeydown="if(event.key==='Enter')confirmEditSubject();if(event.key==='Escape')closeEditSubjectModal();"
+      style="width:100%;background:#080d18;border:1px solid #1e293b;border-radius:8px;padding:9px 12px;color:#e2e8f0;font-size:13px;margin-bottom:14px;" />
+    <div style="display:flex;gap:8px;">
+      <button onclick="closeEditSubjectModal()" style="flex:1;padding:9px;border-radius:8px;border:1px solid #1e293b;background:transparent;color:#64748b;cursor:pointer;">Cancel</button>
+      <button onclick="confirmEditSubject()" id="confirm-edit-subject" style="flex:1;padding:9px;border-radius:8px;border:none;color:#fff;cursor:pointer;font-weight:600;background:#6366f1;">Save</button>
+    </div>
   </div>
 </div>
 
@@ -330,6 +348,15 @@ function renderChapters() {
     delBtn.textContent = '✕';
     delBtn.style.cssText = 'opacity:0.4;cursor:pointer;background:none;border:none;color:#ef4444;font-size:14px;flex-shrink:0;padding:0 2px;';
     delBtn.onclick = () => deleteChapter(ch.id);
+
+    const editBtn = document.createElement('button');
+    editBtn.className = 'edit-ch';
+    editBtn.textContent = '✏️';
+    editBtn.title = 'Rename chapter';
+    editBtn.style.cssText = 'opacity:0.4;cursor:pointer;background:none;border:none;font-size:13px;flex-shrink:0;padding:0 2px;';
+    editBtn.onclick = () => startEditChapter(ch.id, row);
+
+    topRow.appendChild(editBtn);
     topRow.appendChild(delBtn);
     row.appendChild(topRow);
 
@@ -354,24 +381,4 @@ function renderChapters() {
       stepsRow.appendChild(cell);
     });
 
-    row.appendChild(stepsRow);
-    list.appendChild(row);
-  });
-}
-
-function render() {
-  renderSubjectTabs();
-  const hasSub = !!state.subjects.find(s => s.id === state.activeSubject);
-  document.getElementById('empty-state').style.display = hasSub ? 'none' : 'block';
-  document.getElementById('main-content').style.display = hasSub ? 'block' : 'none';
-  if (hasSub) {
-    renderProgress();
-    renderChapters();
-  }
-  hideAddChapter();
-}
-
-load();
-</script>
-</body>
-</html>
+    ro
