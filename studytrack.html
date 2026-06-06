@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>StudyTrack</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #080d18; color: #e2e8f0; font-family: 'DM Sans', sans-serif; min-height: 100vh; }
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: #080d18; }
+    ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 2px; }
+    input, button { font-family: 'DM Sans', sans-serif; outline: none; }
+    .subject-tab { transition: all 0.2s; cursor: pointer; user-select: none; }
+    .subject-tab:active { opacity: 0.7; }
+    .step-check { transition: all 0.18s; cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent; }
+    .step-check:active { transform: scale(0.92); }
+    .chapter-row { animation: fadeIn 0.2s ease; }
+    .del-ch { opacity: 0; transition: opacity 0.15s; cursor: pointer; background: none; border: none; color: #ef4444; font-size: 15px; padding: 0 4px; min-width: 24px; }
+    .chapter-row:hover .del-ch, .chapter-row:focus-within .del-ch { opacity: 1; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes toastIn { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
+    #toast { display: none; position: fixed; bottom: 22px; right: 18px; background: #1e293b; color: #e2e8f0; padding: 9px 16px; border-radius: 10px; font-size: 13px; animation: toastIn 0.2s ease; border: 1px solid #334155; z-index: 200; }
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 100; align-items: center; justify-content: center; padding: 20px; }
+    .modal-overlay.active { display: flex; }
+    .color-dot { width: 26px; height: 26px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: border 0.15s; flex-shrink: 0; }
+    .color-dot.selected { border: 2.5px solid #fff; }
+    #add-chapter-form { display: none; }
+    #add-chapter-form.active { display: flex; }
+    .progress-bar-inner { transition: width 0.4s ease; }
+    #empty-state { display: none; }
+    #main-content { display: none; }
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<div style="background:#0b1120;border-bottom:1px solid #1e293b;padding:18px 18px 14px;">
+  <div style="font-family:'Playfair Display',serif;font-size:24px;font-weight:900;color:#f8fafc;">
+    Study<span style="color:#6366f1;">Track</span>
+  </div>
+  <div style="font-size:11px;color:#475569;margin-top:1px;">Chapter Progress Manager</div>
+</div>
+
+<!-- Subject Tabs -->
+<div id="subject-tabs" style="padding:10px 14px 0;display:flex;gap:6px;overflow-x:auto;align-items:center;"></div>
+
+<!-- Empty State -->
+<div id="empty-state" style="padding:40px;text-align:center;color:#334155;">
+  <div style="font-size:38px;margin-bottom:10px;">📚</div>
+  <div style="font-size:14px;">Add a subject to get started</div>
+</div>
+
+<!-- Main Content -->
+<div id="main-content" style="padding:14px;">
+
+  <!-- Progress Card -->
+  <div style="background:#0b1120;border:1px solid #1e293b;border-radius:14px;padding:14px 16px;margin-bottom:14px;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+      <div>
+        <div id="subject-title" style="font-family:'Playfair Display',serif;font-size:17px;font-weight:700;"></div>
+        <div id="chapter-count" style="font-size:11px;color:#475569;margin-top:2px;"></div>
+      </div>
+      <div style="text-align:right;">
+        <div id="progress-pct" style="font-size:26px;font-weight:900;font-family:'Playfair Display',serif;"></div>
+        <div style="font-size:10px;color:#475569;">fully done</div>
+      </div>
+    </div>
+    <div style="height:5px;background:#1e293b;border-radius:3px;overflow:hidden;margin-bottom:10px;">
+      <div id="progress-bar" class="progress-bar-inner" style="height:100%;width:0%;border-radius:3px;"></div>
+    </div>
+    <div style="display:flex;gap:0;">
+      <div style="flex:1;text-align:center;border-right:1px solid #1e293b;padding:2px 0;">
+        <div style="font-size:16px;">🎬</div>
+        <div id="stat-watching" style="font-size:18px;font-weight:700;font-family:'Playfair Display',serif;color:#f59e0b;">0</div>
+        <div style="font-size:10px;color:#475569;line-height:1.2;">Watching Class</div>
+      </div>
+      <div style="flex:1;text-align:center;border-right:1px solid #1e293b;padding:2px 0;">
+        <div style="font-size:16px;">📖</div>
+        <div id="stat-selfstudy" style="font-size:18px;font-weight:700;font-family:'Playfair Display',serif;color:#22c55e;">0</div>
+        <div style="font-size:10px;color:#475569;line-height:1.2;">Self Study</div>
+      </div>
+      <div style="flex:1;text-align:center;padding:2px 0;">
+        <div style="font-size:16px;">🔄</div>
+        <div id="stat-revision" style="font-size:18px;font-weight:700;font-family:'Playfair Display',serif;color:#818cf8;">0</div>
+        <div style="font-size:10px;color:#475569;line-height:1.2;">Revision</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Column Headers -->
+  <div style="display:grid;grid-template-columns:1fr 72px 72px 72px 32px;gap:4px;margin-bottom:6px;padding:0 2px;">
+    <div style="font-size:11px;color:#475569;font-weight:600;">CHAPTER</div>
+    <div style="font-size:10px;color:#f59e0b;font-weight:600;text-align:center;line-height:1.3;">🎬<br/>Watching</div>
+    <div style="font-size:10px;color:#22c55e;font-weight:600;text-align:center;line-height:1.3;">📖<br/>Self Study</div>
+    <div style="font-size:10px;color:#818cf8;font-weight:600;text-align:center;line-height:1.3;">🔄<br/>Revision</div>
+    <div></div>
+  </div>
+
+  <!-- Chapter List -->
+  <div id="chapter-list" style="display:flex;flex-direction:column;gap:5px;margin-bottom:10px;"></div>
+
+  <!-- Add Chapter Form -->
+  <div id="add-chapter-form" style="background:#0b1120;border:1px solid #334155;border-radius:10px;padding:10px 12px;gap:8px;align-items:center;margin-bottom:8px;">
+    <input id="new-chapter-input" placeholder="Chapter name..." style="flex:1;background:transparent;border:none;color:#e2e8f0;font-size:13px;min-width:0;" />
+    <button onclick="addChapter()" id="add-chapter-btn" style="padding:4px 14px;border-radius:7px;border:none;color:#fff;cursor:pointer;font-size:12px;white-space:nowrap;">Add</button>
+    <button onclick="hideAddChapter()" style="padding:4px 9px;border-radius:7px;border:1px solid #334155;background:transparent;color:#64748b;cursor:pointer;font-size:12px;">✕</button>
+  </div>
+
+  <button id="show-add-chapter-btn" onclick="showAddChapter()" style="width:100%;padding:11px;border-radius:10px;border:1.5px dashed #1e293b;background:transparent;color:#475569;font-size:13px;cursor:pointer;">
+    + Add Chapter
+  </button>
+
+  <div style="margin-top:18px;text-align:center;">
+    <span onclick="deleteSubject()" style="font-size:11px;color:#334155;cursor:pointer;text-decoration:underline;">Delete this subject</span>
+  </div>
+</div>
+
+<!-- Add Subject Modal -->
+<div id="add-subject-modal" class="modal-overlay">
+  <div style="background:#0f1827;border:1px solid #1e293b;border-radius:16px;padding:22px;width:100%;max-width:320px;">
+    <div style="font-family:'Playfair Display',serif;font-size:17px;font-weight:700;margin-bottom:14px;">New Subject</div>
+    <input id="new-subject-input" placeholder="Subject name..." onkeydown="if(event.key==='Enter')addSubject()"
+      style="width:100%;background:#080d18;border:1px solid #1e293b;border-radius:8px;padding:9px 12px;color:#e2e8f0;font-size:13px;margin-bottom:12px;" />
+    <div style="margin-bottom:14px;">
+      <div style="font-size:11px;color:#64748b;margin-bottom:7px;">Color</div>
+      <div style="display:flex;gap:8px;" id="color-picker"></div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button onclick="closeSubjectModal()" style="flex:1;padding:9px;border-radius:8px;border:1px solid #1e293b;background:transparent;color:#64748b;cursor:pointer;">Cancel</button>
+      <button onclick="addSubject()" id="confirm-add-subject" style="flex:1;padding:9px;border-radius:8px;border:none;color:#fff;cursor:pointer;font-weight:600;">Add</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+const STORAGE_KEY = 'studytrack-data';
+const COLORS = ['#6366f1','#ec4899','#f59e0b','#22c55e','#06b6d4','#f97316'];
+const STEPS = [
+  { key: 'watching', color: '#f59e0b', bg: '#1a1200' },
+  { key: 'selfstudy', color: '#22c55e', bg: '#001a0a' },
+  { key: 'revision', color: '#818cf8', bg: '#0d0a1a' },
+];
+
+let state = { subjects: [], activeSubject: null };
+let selectedColor = '#6366f1';
+
+function genId() { return Math.random().toString(36).slice(2,9); }
+
+function load() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) state = JSON.parse(raw);
+  } catch {}
+  render();
+}
+
+function save() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.display = 'block';
+  setTimeout(() => t.style.display = 'none', 2000);
+}
+
+// Color Picker
+function buildColorPicker() {
+  const cp = document.getElementById('color-picker');
+  cp.innerHTML = '';
+  COLORS.forEach(c => {
+    const d = document.createElement('div');
+    d.className = 'color-dot' + (c === selectedColor ? ' selected' : '');
+    d.style.background = c;
+    d.onclick = () => { selectedColor = c; buildColorPicker(); document.getElementById('confirm-add-subject').style.background = c; };
+    cp.appendChild(d);
+  });
+  document.getElementById('confirm-add-subject').style.background = selectedColor;
+}
+
+function openSubjectModal() {
+  selectedColor = '#6366f1';
+  buildColorPicker();
+  document.getElementById('new-subject-input').value = '';
+  document.getElementById('add-subject-modal').classList.add('active');
+  setTimeout(() => document.getElementById('new-subject-input').focus(), 100);
+}
+
+function closeSubjectModal() {
+  document.getElementById('add-subject-modal').classList.remove('active');
+}
+
+function addSubject() {
+  const name = document.getElementById('new-subject-input').value.trim();
+  if (!name) return;
+  const sub = { id: genId(), name, color: selectedColor, chapters: [] };
+  state.subjects.push(sub);
+  state.activeSubject = sub.id;
+  save(); closeSubjectModal(); render();
+  showToast('Subject added!');
+}
+
+function switchSubject(id) {
+  state.activeSubject = id;
+  save(); render();
+}
+
+function deleteSubject() {
+  if (!confirm('Delete this subject and all its chapters?')) return;
+  state.subjects = state.subjects.filter(s => s.id !== state.activeSubject);
+  state.activeSubject = state.subjects.length > 0 ? state.subjects[0].id : null;
+  save(); render();
+}
+
+function showAddChapter() {
+  document.getElementById('add-chapter-form').classList.add('active');
+  document.getElementById('show-add-chapter-btn').style.display = 'none';
+  setTimeout(() => document.getElementById('new-chapter-input').focus(), 100);
+}
+
+function hideAddChapter() {
+  document.getElementById('add-chapter-form').classList.remove('active');
+  document.getElementById('show-add-chapter-btn').style.display = 'block';
+  document.getElementById('new-chapter-input').value = '';
+}
+
+function addChapter() {
+  const name = document.getElementById('new-chapter-input').value.trim();
+  if (!name || !state.activeSubject) return;
+  const chapter = { id: genId(), name, steps: { watching: null, selfstudy: null, revision: null } };
+  const sub = state.subjects.find(s => s.id === state.activeSubject);
+  if (sub) sub.chapters.push(chapter);
+  save(); hideAddChapter(); renderChapters();
+  showToast('Chapter added!');
+}
+
+document.getElementById('new-chapter-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') addChapter();
+  if (e.key === 'Escape') hideAddChapter();
+});
+
+function toggleStep(chapterId, stepKey) {
+  const cycle = v => v === null ? true : v === true ? false : null;
+  const sub = state.subjects.find(s => s.id === state.activeSubject);
+  if (!sub) return;
+  const ch = sub.chapters.find(c => c.id === chapterId);
+  if (!ch) return;
+  ch.steps[stepKey] = cycle(ch.steps[stepKey]);
+  save(); renderChapters(); renderProgress();
+}
+
+function deleteChapter(chapterId) {
+  const sub = state.subjects.find(s => s.id === state.activeSubject);
+  if (!sub) return;
+  sub.chapters = sub.chapters.filter(c => c.id !== chapterId);
+  save(); renderChapters(); renderProgress();
+}
+
+function renderSubjectTabs() {
+  const container = document.getElementById('subject-tabs');
+  container.innerHTML = '';
+  state.subjects.forEach(s => {
+    const d = document.createElement('div');
+    d.className = 'subject-tab';
+    d.style.cssText = `display:inline-flex;align-items:center;gap:5px;padding:5px 13px;border-radius:20px;flex-shrink:0;background:${state.activeSubject===s.id?'#1e293b':'transparent'};border:1.5px solid ${state.activeSubject===s.id?s.color:'#1e293b'};color:${state.activeSubject===s.id?'#f8fafc':'#64748b'};font-size:12px;font-weight:500;`;
+    d.innerHTML = `<span style="width:7px;height:7px;border-radius:50%;background:${s.color};flex-shrink:0;display:inline-block;"></span>${s.name}`;
+    d.onclick = () => switchSubject(s.id);
+    container.appendChild(d);
+  });
+  const addBtn = document.createElement('div');
+  addBtn.className = 'subject-tab';
+  addBtn.style.cssText = 'display:inline-flex;align-items:center;padding:5px 12px;border-radius:20px;border:1.5px dashed #334155;color:#475569;font-size:12px;flex-shrink:0;';
+  addBtn.textContent = '+ Subject';
+  addBtn.onclick = openSubjectModal;
+  container.appendChild(addBtn);
+}
+
+function renderProgress() {
+  const sub = state.subjects.find(s => s.id === state.activeSubject);
+  if (!sub) return;
+  const chapters = sub.chapters;
+  const total = chapters.length;
+  const watching = chapters.filter(c => c.steps.watching === true).length;
+  const selfstudy = chapters.filter(c => c.steps.selfstudy === true).length;
+  const revision = chapters.filter(c => c.steps.revision === true).length;
+  const progress = total > 0 ? Math.round((revision / total) * 100) : 0;
+
+  document.getElementById('subject-title').textContent = sub.name;
+  document.getElementById('chapter-count').textContent = total + ' chapters';
+  document.getElementById('progress-pct').textContent = progress + '%';
+  document.getElementById('progress-pct').style.color = sub.color;
+  document.getElementById('progress-bar').style.width = progress + '%';
+  document.getElementById('progress-bar').style.background = `linear-gradient(90deg, ${sub.color}, ${sub.color}99)`;
+  document.getElementById('stat-watching').textContent = watching;
+  document.getElementById('stat-selfstudy').textContent = selfstudy;
+  document.getElementById('stat-revision').textContent = revision;
+  document.getElementById('add-chapter-btn').style.background = sub.color;
+}
+
+function renderChapters() {
+  const sub = state.subjects.find(s => s.id === state.activeSubject);
+  const list = document.getElementById('chapter-list');
+  list.innerHTML = '';
+  if (!sub || sub.chapters.length === 0) {
+    list.innerHTML = '<div style="text-align:center;color:#334155;padding:20px 0;font-size:13px;">No chapters yet — add one below</div>';
+    return;
+  }
+  sub.chapters.forEach((ch, i) => {
+    const row = document.createElement('div');
+    row.className = 'chapter-row';
+    row.style.cssText = 'display:grid;grid-template-columns:1fr 72px 72px 72px 32px;gap:4px;background:#0b1120;border:1px solid #1e293b;border-radius:10px;padding:10px;align-items:center;';
+
+    // Name cell
+    const nameCell = document.createElement('div');
+    nameCell.style.cssText = 'display:flex;align-items:center;gap:7px;min-width:0;';
+    const isDoneAll = ch.steps.revision === true;
+    nameCell.innerHTML = `<span style="font-size:11px;color:#334155;flex-shrink:0;">${i+1}</span>
+      <span style="font-size:13px;color:${isDoneAll?'#475569':'#e2e8f0'};text-decoration:${isDoneAll?'line-through':'none'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${ch.name}</span>`;
+    row.appendChild(nameCell);
+
+    // Step cells
+    STEPS.forEach(step => {
+      const val = ch.steps[step.key];
+      const isDone = val === true;
+      const isSkip = val === false;
+      const cell = document.createElement('div');
+      cell.className = 'step-check';
+      cell.style.cssText = `display:flex;align-items:center;justify-content:center;height:32px;border-radius:8px;background:${isDone?step.bg:isSkip?'#1a0a0a':'#0a0f1a'};border:1.5px solid ${isDone?step.color:isSkip?'#ef444466':'#1e293b'};`;
+      cell.innerHTML = isDone
+        ? `<span style="color:${step.color};font-size:15px;font-weight:700;">✓</span>`
+        : isSkip
+        ? `<span style="color:#ef4444;font-size:15px;font-weight:700;">✗</span>`
+        : `<span style="color:#334155;font-size:15px;">○</span>`;
+      cell.onclick = () => toggleStep(ch.id, step.key);
+      row.appendChild(cell);
+    });
+
+    // Delete btn
+    const delBtn = document.createElement('button');
+    delBtn.className = 'del-ch';
+    delBtn.textContent = '✕';
+    delBtn.onclick = () => deleteChapter(ch.id);
+    row.appendChild(delBtn);
+
+    list.appendChild(row);
+  });
+}
+
+function render() {
+  renderSubjectTabs();
+  const hasSub = !!state.subjects.find(s => s.id === state.activeSubject);
+  document.getElementById('empty-state').style.display = hasSub ? 'none' : 'block';
+  document.getElementById('main-content').style.display = hasSub ? 'block' : 'none';
+  if (hasSub) {
+    renderProgress();
+    renderChapters();
+  }
+  hideAddChapter();
+}
+
+load();
+</script>
+</body>
+</html>
