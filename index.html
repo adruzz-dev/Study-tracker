@@ -23,7 +23,7 @@
     .chapter-row:hover .del-ch, .chapter-row:focus-within .del-ch { opacity: 1; }
     .chapter-row:hover .edit-ch, .chapter-row:focus-within .edit-ch { opacity: 1; }
     .ch-edit-input { flex:1; background:#0f1827; border:1px solid #6366f1; border-radius:6px; color:#e2e8f0; font-size:14px; padding:2px 8px; font-family:'DM Sans',sans-serif; outline:none; min-width:0; }
-    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.82); z-index: 100; align-items: center; justify-content: center; padding: 20px; }
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.82); z-index: 100; align-items: center; justify-content: center; padding: 16px; }
     .modal-overlay.active { display: flex; }
     .color-dot { width: 26px; height: 26px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: border 0.15s; flex-shrink: 0; }
     .color-dot.selected { border: 2.5px solid #fff; }
@@ -32,9 +32,9 @@
     .progress-bar-inner { transition: width 0.4s ease; }
     #main-content { display: none; }
     #no-subject-state { display: none; }
-    .stream-btn { padding: 13px 10px; border-radius: 12px; border: 1.5px solid #1e293b; background: #0b1120; color: #94a3b8; cursor: pointer; font-size: 13px; font-weight: 500; text-align: center; transition: all 0.18s; }
+    .stream-btn { padding: 14px 10px; border-radius: 12px; border: 1.5px solid #1e293b; background: #0b1120; color: #94a3b8; cursor: pointer; font-size: 14px; font-weight: 600; text-align: center; transition: all 0.18s; -webkit-tap-highlight-color: transparent; }
     .stream-btn.active { border-color: #6366f1; background: #1e1b4b; color: #a5b4fc; }
-    .setup-subject-check { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 8px; border: 1px solid #1e293b; background: #080d18; cursor: pointer; transition: border 0.15s; }
+    .setup-subject-check { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 10px; border: 1px solid #1e293b; background: #080d18; cursor: pointer; transition: all 0.15s; -webkit-tap-highlight-color: transparent; }
     .setup-subject-check.checked { border-color: #6366f1; background: #0f0f2a; }
     .check-box { width: 18px; height: 18px; border-radius: 5px; border: 1.5px solid #334155; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; transition: all 0.15s; }
     .setup-subject-check.checked .check-box { background: #6366f1; border-color: #6366f1; color: #fff; }
@@ -43,7 +43,7 @@
     @keyframes slideUp { from { opacity:0; transform: translateY(30px); } to { opacity:1; transform: translateY(0); } }
     #toast { display: none; position: fixed; bottom: 22px; right: 18px; background: #1e293b; color: #e2e8f0; padding: 9px 16px; border-radius: 10px; font-size: 13px; animation: toastIn 0.2s ease; border: 1px solid #334155; z-index: 300; }
     #setup-modal .modal-inner { animation: slideUp 0.3s ease; }
-    .setup-scroll { max-height: 36vh; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+    .setup-scroll { display: flex; flex-direction: column; gap: 6px; }
   </style>
 </head>
 <body>
@@ -131,17 +131,17 @@
 </div>
 
 <!-- SETUP MODAL -->
-<div id="setup-modal" class="modal-overlay active">
-  <div class="modal-inner" style="background:#0f1827;border:1px solid #1e293b;border-radius:18px;padding:22px;width:100%;max-width:340px;max-height:92vh;overflow-y:auto;">
+<div id="setup-modal" class="modal-overlay active" style="align-items:flex-start;overflow-y:auto;padding:16px;">
+  <div class="modal-inner" style="background:#0f1827;border:1px solid #1e293b;border-radius:18px;padding:22px;width:100%;max-width:340px;margin:auto;">
     <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:900;color:#f8fafc;margin-bottom:4px;">Welcome to StudyTrack</div>
     <div style="font-size:12px;color:#475569;margin-bottom:18px;">Kerala Plus Two &middot; Pick your stream</div>
 
     <div style="font-size:11px;color:#64748b;font-weight:600;letter-spacing:0.05em;margin-bottom:8px;">STREAM</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px;">
-      <button class="stream-btn active" onclick="selectStream('science')" id="btn-science">🔬 Science</button>
-      <button class="stream-btn" onclick="selectStream('bio')" id="btn-bio">🧬 Biology</button>
-      <button class="stream-btn" onclick="selectStream('cs')" id="btn-cs">💻 Comp. Sci.</button>
-      <button class="stream-btn" onclick="selectStream('commerce')" id="btn-commerce">📊 Commerce</button>
+      <button class="stream-btn active" onclick="selectStream('science')" id="btn-science">Science</button>
+      <button class="stream-btn" onclick="selectStream('bio')" id="btn-bio">Biology</button>
+      <button class="stream-btn" onclick="selectStream('cs')" id="btn-cs">Comp. Sci.</button>
+      <button class="stream-btn" onclick="selectStream('commerce')" id="btn-commerce">Commerce</button>
     </div>
 
     <div style="font-size:11px;color:#64748b;font-weight:600;letter-spacing:0.05em;margin-bottom:8px;">SUBJECTS <span id="sel-count" style="color:#6366f1;font-weight:700;"></span></div>
@@ -275,4 +275,323 @@ function genId() { return Math.random().toString(36).slice(2,9); }
 
 function load() {
   try {
-    const raw = loc
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      state = JSON.parse(raw);
+      document.getElementById('setup-modal').classList.remove('active');
+      render();
+    } else {
+      initSetupModal();
+    }
+  } catch(e) { initSetupModal(); }
+}
+
+function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.display = 'block';
+  clearTimeout(t._tmr);
+  t._tmr = setTimeout(() => t.style.display = 'none', 2200);
+}
+
+// ══════════════════════════════════════════════
+//  SETUP MODAL
+// ══════════════════════════════════════════════
+function initSetupModal() {
+  setupStream = 'science';
+  setupChecked = {};
+  STREAMS.science.subjects.forEach(k => setupChecked[k] = true);
+  renderSetupSubjects();
+}
+
+function selectStream(s) {
+  setupStream = s;
+  ['science','bio','cs','commerce'].forEach(x => document.getElementById('btn-'+x).classList.remove('active'));
+  document.getElementById('btn-'+s).classList.add('active');
+  setupChecked = {};
+  STREAMS[s].subjects.forEach(k => setupChecked[k] = true);
+  renderSetupSubjects();
+}
+
+function renderSetupSubjects() {
+  const list = document.getElementById('setup-subject-list');
+  list.innerHTML = '';
+  STREAMS[setupStream].subjects.forEach(k => {
+    const sub = SYLLABUS[k];
+    const checked = !!setupChecked[k];
+    const div = document.createElement('div');
+    div.className = 'setup-subject-check' + (checked ? ' checked' : '');
+    div.innerHTML = `<div class="check-box">${checked ? '✓' : ''}</div><span style="width:11px;height:11px;border-radius:50%;background:${sub.color};flex-shrink:0;display:inline-block;"></span><span style="font-size:13px;color:#e2e8f0;flex:1;">${sub.name}</span><span style="font-size:11px;color:#475569;">${sub.chapters.length} ch</span>`;
+    div.onclick = () => { setupChecked[k] = !setupChecked[k]; renderSetupSubjects(); };
+    list.appendChild(div);
+  });
+  const count = Object.values(setupChecked).filter(Boolean).length;
+  document.getElementById('sel-count').textContent = count ? '(' + count + ' selected)' : '';
+}
+
+function finishSetup() {
+  const keys = Object.entries(setupChecked).filter(([,v]) => v).map(([k]) => k);
+  if (!keys.length) { showToast('Select at least one subject'); return; }
+  state.subjects = keys.map(k => ({
+    id: genId(), name: SYLLABUS[k].name, color: SYLLABUS[k].color,
+    chapters: SYLLABUS[k].chapters.map(name => ({ id: genId(), name, steps: { watching: null, selfstudy: null, revision: null } }))
+  }));
+  state.activeSubject = state.subjects[0]?.id || null;
+  save();
+  document.getElementById('setup-modal').classList.remove('active');
+  render();
+  showToast('All chapters loaded! Let\'s go 🚀');
+}
+
+function skipSetup() {
+  state = { subjects: [], activeSubject: null };
+  save();
+  document.getElementById('setup-modal').classList.remove('active');
+  render();
+}
+
+// ══════════════════════════════════════════════
+//  SUBJECT MODAL
+// ══════════════════════════════════════════════
+function buildColorPicker() {
+  const cp = document.getElementById('color-picker');
+  cp.innerHTML = '';
+  COLORS.forEach(c => {
+    const d = document.createElement('div');
+    d.className = 'color-dot' + (c === selectedColor ? ' selected' : '');
+    d.style.background = c;
+    d.onclick = () => { selectedColor = c; buildColorPicker(); document.getElementById('confirm-add-subject').style.background = c; };
+    cp.appendChild(d);
+  });
+  document.getElementById('confirm-add-subject').style.background = selectedColor;
+}
+
+function openSubjectModal() {
+  selectedColor = COLORS[state.subjects.length % COLORS.length];
+  buildColorPicker();
+  document.getElementById('new-subject-input').value = '';
+  document.getElementById('add-subject-modal').classList.add('active');
+  setTimeout(() => document.getElementById('new-subject-input').focus(), 100);
+}
+
+function closeSubjectModal() { document.getElementById('add-subject-modal').classList.remove('active'); }
+
+function addSubject() {
+  const name = document.getElementById('new-subject-input').value.trim();
+  if (!name) return;
+  const sub = { id: genId(), name, color: selectedColor, chapters: [] };
+  state.subjects.push(sub);
+  state.activeSubject = sub.id;
+  save(); closeSubjectModal(); render();
+  showToast('Subject added!');
+}
+
+function switchSubject(id) { state.activeSubject = id; save(); render(); }
+
+function deleteSubject() {
+  if (!confirm('Delete this subject and all its chapters?')) return;
+  state.subjects = state.subjects.filter(s => s.id !== state.activeSubject);
+  state.activeSubject = state.subjects.length > 0 ? state.subjects[0].id : null;
+  save(); render();
+}
+
+// ══════════════════════════════════════════════
+//  CHAPTERS
+// ══════════════════════════════════════════════
+function showAddChapter() {
+  document.getElementById('add-chapter-form').classList.add('active');
+  document.getElementById('show-add-chapter-btn').style.display = 'none';
+  setTimeout(() => document.getElementById('new-chapter-input').focus(), 100);
+}
+
+function hideAddChapter() {
+  document.getElementById('add-chapter-form').classList.remove('active');
+  document.getElementById('show-add-chapter-btn').style.display = 'block';
+  document.getElementById('new-chapter-input').value = '';
+}
+
+function addChapter() {
+  const name = document.getElementById('new-chapter-input').value.trim();
+  if (!name || !state.activeSubject) return;
+  const ch = { id: genId(), name, steps: { watching: null, selfstudy: null, revision: null } };
+  const sub = state.subjects.find(s => s.id === state.activeSubject);
+  if (sub) sub.chapters.push(ch);
+  save(); hideAddChapter(); renderChapters();
+  showToast('Chapter added!');
+}
+
+document.getElementById('new-chapter-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') addChapter();
+  if (e.key === 'Escape') hideAddChapter();
+});
+
+function toggleStep(chapterId, stepKey) {
+  const cycle = v => v === null ? true : v === true ? false : null;
+  const sub = state.subjects.find(s => s.id === state.activeSubject);
+  if (!sub) return;
+  const ch = sub.chapters.find(c => c.id === chapterId);
+  if (!ch) return;
+  ch.steps[stepKey] = cycle(ch.steps[stepKey]);
+  save(); renderChapters(); renderProgress();
+}
+
+function deleteChapter(id) {
+  const sub = state.subjects.find(s => s.id === state.activeSubject);
+  if (!sub) return;
+  sub.chapters = sub.chapters.filter(c => c.id !== id);
+  save(); renderChapters(); renderProgress();
+}
+
+// ══════════════════════════════════════════════
+//  RENDER
+// ══════════════════════════════════════════════
+function renderSubjectTabs() {
+  const container = document.getElementById('subject-tabs');
+  container.innerHTML = '';
+  state.subjects.forEach(s => {
+    const d = document.createElement('div');
+    d.className = 'subject-tab';
+    const isActive = state.activeSubject === s.id;
+    d.style.cssText = `display:inline-flex;align-items:center;gap:5px;padding:5px 13px;border-radius:20px;flex-shrink:0;background:${isActive?'#1e293b':'transparent'};border:1.5px solid ${isActive?s.color:'#1e293b'};color:${isActive?'#f8fafc':'#64748b'};font-size:12px;font-weight:500;`;
+    d.innerHTML = `<span style="width:7px;height:7px;border-radius:50%;background:${s.color};flex-shrink:0;display:inline-block;"></span>${s.name}`;
+    d.onclick = () => switchSubject(s.id);
+    container.appendChild(d);
+  });
+  const addBtn = document.createElement('div');
+  addBtn.className = 'subject-tab';
+  addBtn.style.cssText = 'display:inline-flex;align-items:center;padding:5px 12px;border-radius:20px;border:1.5px dashed #334155;color:#475569;font-size:12px;flex-shrink:0;';
+  addBtn.textContent = '+ Subject';
+  addBtn.onclick = openSubjectModal;
+  container.appendChild(addBtn);
+}
+
+function renderProgress() {
+  const sub = state.subjects.find(s => s.id === state.activeSubject);
+  if (!sub) return;
+  const chs = sub.chapters;
+  const total     = chs.length;
+  const watching  = chs.filter(c => c.steps.watching  === true).length;
+  const selfstudy = chs.filter(c => c.steps.selfstudy === true).length;
+  const revision  = chs.filter(c => c.steps.revision  === true).length;
+  const pct       = total > 0 ? Math.round((revision / total) * 100) : 0;
+  document.getElementById('subject-title').textContent    = sub.name;
+  document.getElementById('chapter-count').textContent    = total + ' chapters';
+  document.getElementById('progress-pct').textContent     = pct + '%';
+  document.getElementById('progress-pct').style.color     = sub.color;
+  document.getElementById('progress-bar').style.width     = pct + '%';
+  document.getElementById('progress-bar').style.background = `linear-gradient(90deg,${sub.color},${sub.color}99)`;
+  document.getElementById('stat-watching').textContent    = watching;
+  document.getElementById('stat-selfstudy').textContent   = selfstudy;
+  document.getElementById('stat-revision').textContent    = revision;
+  document.getElementById('add-chapter-btn').style.background = sub.color;
+}
+
+function renderChapters() {
+  const sub  = state.subjects.find(s => s.id === state.activeSubject);
+  const list = document.getElementById('chapter-list');
+  list.innerHTML = '';
+  if (!sub || !sub.chapters.length) {
+    list.innerHTML = '<div style="text-align:center;color:#334155;padding:20px 0;font-size:13px;">No chapters yet</div>';
+    return;
+  }
+  sub.chapters.forEach((ch, i) => {
+    const row = document.createElement('div');
+    row.className = 'chapter-row';
+    row.style.cssText = 'background:#0b1120;border:1px solid #1e293b;border-radius:10px;padding:10px 12px;';
+    const done = ch.steps.revision === true;
+    const topRow = document.createElement('div');
+    topRow.style.cssText = 'display:flex;align-items:center;gap:7px;margin-bottom:8px;';
+    topRow.innerHTML = `<span style="font-size:11px;color:#334155;flex-shrink:0;">${i+1}</span><span style="font-size:13px;color:${done?'#475569':'#e2e8f0'};text-decoration:${done?'line-through':'none'};flex:1;word-break:break-word;">${ch.name}</span>`;
+    const editBtn = document.createElement('button');
+    editBtn.className = 'edit-ch';
+    editBtn.textContent = '✏️';
+    editBtn.style.cssText = 'opacity:0;cursor:pointer;background:none;border:none;font-size:12px;flex-shrink:0;padding:0 2px;';
+    editBtn.onclick = () => startEditChapter(ch.id, row);
+    const delBtn = document.createElement('button');
+    delBtn.className = 'del-ch';
+    delBtn.textContent = '✕';
+    delBtn.style.cssText = 'opacity:0;cursor:pointer;background:none;border:none;color:#ef4444;font-size:14px;flex-shrink:0;padding:0 2px;';
+    delBtn.onclick = () => deleteChapter(ch.id);
+    topRow.appendChild(editBtn);
+    topRow.appendChild(delBtn);
+    row.appendChild(topRow);
+    const stepsRow = document.createElement('div');
+    stepsRow.style.cssText = 'display:flex;gap:5px;';
+    STEPS.forEach(step => {
+      const val = ch.steps[step.key];
+      const isDone = val === true, isSkip = val === false;
+      const cell = document.createElement('div');
+      cell.className = 'step-check';
+      cell.style.cssText = `flex:1;display:flex;align-items:center;justify-content:center;height:36px;border-radius:8px;background:${isDone?step.bg:isSkip?'#1a0a0a':'#0a0f1a'};border:1.5px solid ${isDone?step.color:isSkip?'#ef444466':'#1e293b'};`;
+      cell.innerHTML = isDone ? `<span style="color:${step.color};font-size:15px;font-weight:700;">✓</span>` : isSkip ? `<span style="color:#ef4444;font-size:15px;font-weight:700;">✗</span>` : `<span style="color:#334155;font-size:15px;">○</span>`;
+      cell.onclick = () => toggleStep(ch.id, step.key);
+      stepsRow.appendChild(cell);
+    });
+    row.appendChild(stepsRow);
+    list.appendChild(row);
+  });
+}
+
+function render() {
+  if (!state.subjects.find(s => s.id === state.activeSubject))
+    state.activeSubject = state.subjects.length > 0 ? state.subjects[0].id : null;
+  renderSubjectTabs();
+  const hasSub = !!state.subjects.find(s => s.id === state.activeSubject);
+  document.getElementById('no-subject-state').style.display = hasSub ? 'none' : 'block';
+  document.getElementById('main-content').style.display     = hasSub ? 'block' : 'none';
+  if (hasSub) { renderProgress(); renderChapters(); }
+  hideAddChapter();
+}
+
+// ── Edit Subject ──────────────────────────────
+function openEditSubjectModal() {
+  const sub = state.subjects.find(s => s.id === state.activeSubject);
+  if (!sub) return;
+  document.getElementById('edit-subject-input').value = sub.name;
+  document.getElementById('confirm-edit-subject').style.background = sub.color;
+  document.getElementById('edit-subject-modal').classList.add('active');
+  setTimeout(() => { const i = document.getElementById('edit-subject-input'); i.focus(); i.select(); }, 100);
+}
+function closeEditSubjectModal() { document.getElementById('edit-subject-modal').classList.remove('active'); }
+function confirmEditSubject() {
+  const name = document.getElementById('edit-subject-input').value.trim();
+  if (!name) return;
+  const sub = state.subjects.find(s => s.id === state.activeSubject);
+  if (sub) { sub.name = name; save(); closeEditSubjectModal(); render(); showToast('Renamed!'); }
+}
+
+// ── Edit Chapter inline ───────────────────────
+function startEditChapter(chapterId, rowEl) {
+  const sub = state.subjects.find(s => s.id === state.activeSubject);
+  if (!sub) return;
+  const ch = sub.chapters.find(c => c.id === chapterId);
+  if (!ch) return;
+  const topRow   = rowEl.querySelector('div');
+  const nameSpan = topRow.querySelectorAll('span')[1];
+  if (!nameSpan) return;
+  const inp = document.createElement('input');
+  inp.className = 'ch-edit-input';
+  inp.value = ch.name;
+  topRow.replaceChild(inp, nameSpan);
+  inp.focus(); inp.select();
+  topRow.querySelectorAll('button').forEach(b => b.style.display = 'none');
+  const saveBtn   = document.createElement('button');
+  saveBtn.textContent = '✓';
+  saveBtn.style.cssText = 'background:#6366f1;border:none;color:#fff;border-radius:6px;padding:3px 10px;cursor:pointer;font-size:14px;flex-shrink:0;';
+  const cancelBtn = document.createElement('button');
+  cancelBtn.textContent = '✕';
+  cancelBtn.style.cssText = 'background:transparent;border:1px solid #334155;color:#64748b;border-radius:6px;padding:3px 8px;cursor:pointer;font-size:13px;flex-shrink:0;';
+  topRow.appendChild(saveBtn);
+  topRow.appendChild(cancelBtn);
+  const confirm = () => { const n = inp.value.trim(); if (n) { ch.name = n; save(); } renderChapters(); showToast('Renamed!'); };
+  const cancel  = () => renderChapters();
+  saveBtn.onclick = confirm; cancelBtn.onclick = cancel;
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') confirm(); if (e.key === 'Escape') cancel(); });
+}
+
+document.addEventListener("DOMContentLoaded", load);
+</script>
+</body>
+</html>
