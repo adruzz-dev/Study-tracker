@@ -91,12 +91,11 @@
   </div>
 
   <!-- Column Headers -->
-  <div style="display:grid;grid-template-columns:1fr 72px 72px 72px 32px;gap:4px;margin-bottom:6px;padding:0 2px;">
-    <div style="font-size:11px;color:#475569;font-weight:600;">CHAPTER</div>
-    <div style="font-size:10px;color:#f59e0b;font-weight:600;text-align:center;line-height:1.3;">🎬<br/>Watching</div>
-    <div style="font-size:10px;color:#22c55e;font-weight:600;text-align:center;line-height:1.3;">📖<br/>Self Study</div>
-    <div style="font-size:10px;color:#818cf8;font-weight:600;text-align:center;line-height:1.3;">🔄<br/>Revision</div>
-    <div></div>
+  <div style="display:flex;justify-content:flex-end;gap:4px;margin-bottom:6px;padding:0 2px;">
+    <div style="width:80px;font-size:10px;color:#f59e0b;font-weight:600;text-align:center;line-height:1.3;">🎬<br/>Watching</div>
+    <div style="width:80px;font-size:10px;color:#22c55e;font-weight:600;text-align:center;line-height:1.3;">📖<br/>Self Study</div>
+    <div style="width:80px;font-size:10px;color:#818cf8;font-weight:600;text-align:center;line-height:1.3;">🔄<br/>Revision</div>
+    <div style="width:28px;"></div>
   </div>
 
   <!-- Chapter List -->
@@ -315,15 +314,28 @@ function renderChapters() {
   sub.chapters.forEach((ch, i) => {
     const row = document.createElement('div');
     row.className = 'chapter-row';
-    row.style.cssText = 'display:grid;grid-template-columns:1fr 72px 72px 72px 32px;gap:4px;background:#0b1120;border:1px solid #1e293b;border-radius:10px;padding:10px;align-items:center;';
+    row.style.cssText = 'background:#0b1120;border:1px solid #1e293b;border-radius:10px;padding:10px 12px;';
 
-    // Name cell
-    const nameCell = document.createElement('div');
-    nameCell.style.cssText = 'display:flex;align-items:center;gap:7px;min-width:0;';
     const isDoneAll = ch.steps.revision === true;
-    nameCell.innerHTML = `<span style="font-size:11px;color:#334155;flex-shrink:0;">${i+1}</span>
-      <span style="font-size:13px;color:${isDoneAll?'#475569':'#e2e8f0'};text-decoration:${isDoneAll?'line-through':'none'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${ch.name}</span>`;
-    row.appendChild(nameCell);
+
+    // Top row: number + name + delete
+    const topRow = document.createElement('div');
+    topRow.style.cssText = 'display:flex;align-items:center;gap:7px;margin-bottom:8px;';
+    topRow.innerHTML = `
+      <span style="font-size:11px;color:#334155;flex-shrink:0;">${i+1}</span>
+      <span style="font-size:14px;color:${isDoneAll?'#475569':'#e2e8f0'};text-decoration:${isDoneAll?'line-through':'none'};flex:1;word-break:break-word;">${ch.name}</span>`;
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'del-ch';
+    delBtn.textContent = '✕';
+    delBtn.style.cssText = 'opacity:0.4;cursor:pointer;background:none;border:none;color:#ef4444;font-size:14px;flex-shrink:0;padding:0 2px;';
+    delBtn.onclick = () => deleteChapter(ch.id);
+    topRow.appendChild(delBtn);
+    row.appendChild(topRow);
+
+    // Bottom row: 3 step checkboxes
+    const stepsRow = document.createElement('div');
+    stepsRow.style.cssText = 'display:flex;gap:6px;';
 
     // Step cells
     STEPS.forEach(step => {
@@ -332,23 +344,17 @@ function renderChapters() {
       const isSkip = val === false;
       const cell = document.createElement('div');
       cell.className = 'step-check';
-      cell.style.cssText = `display:flex;align-items:center;justify-content:center;height:32px;border-radius:8px;background:${isDone?step.bg:isSkip?'#1a0a0a':'#0a0f1a'};border:1.5px solid ${isDone?step.color:isSkip?'#ef444466':'#1e293b'};`;
+      cell.style.cssText = `flex:1;display:flex;align-items:center;justify-content:center;height:36px;border-radius:8px;background:${isDone?step.bg:isSkip?'#1a0a0a':'#0a0f1a'};border:1.5px solid ${isDone?step.color:isSkip?'#ef444466':'#1e293b'};`;
       cell.innerHTML = isDone
         ? `<span style="color:${step.color};font-size:15px;font-weight:700;">✓</span>`
         : isSkip
         ? `<span style="color:#ef4444;font-size:15px;font-weight:700;">✗</span>`
         : `<span style="color:#334155;font-size:15px;">○</span>`;
       cell.onclick = () => toggleStep(ch.id, step.key);
-      row.appendChild(cell);
+      stepsRow.appendChild(cell);
     });
 
-    // Delete btn
-    const delBtn = document.createElement('button');
-    delBtn.className = 'del-ch';
-    delBtn.textContent = '✕';
-    delBtn.onclick = () => deleteChapter(ch.id);
-    row.appendChild(delBtn);
-
+    row.appendChild(stepsRow);
     list.appendChild(row);
   });
 }
