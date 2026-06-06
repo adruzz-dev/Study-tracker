@@ -381,4 +381,102 @@ function renderChapters() {
       stepsRow.appendChild(cell);
     });
 
-    ro
+    row.appendChild(stepsRow);
+    list.appendChild(row);
+  });
+}
+
+function render() {
+  // Auto-select first subject if activeSubject is missing or invalid
+  if (!state.subjects.find(s => s.id === state.activeSubject)) {
+    state.activeSubject = state.subjects.length > 0 ? state.subjects[0].id : null;
+  }
+  renderSubjectTabs();
+  const hasSub = !!state.subjects.find(s => s.id === state.activeSubject);
+  document.getElementById('empty-state').style.display = hasSub ? 'none' : 'block';
+  document.getElementById('main-content').style.display = hasSub ? 'block' : 'none';
+  if (hasSub) {
+    renderProgress();
+    renderChapters();
+  }
+  hideAddChapter();
+}
+
+// ── Edit Subject ──────────────────────────────────────────────
+function openEditSubjectModal() {
+  const sub = state.subjects.find(s => s.id === state.activeSubject);
+  if (!sub) return;
+  const input = document.getElementById('edit-subject-input');
+  input.value = sub.name;
+  document.getElementById('confirm-edit-subject').style.background = sub.color;
+  document.getElementById('edit-subject-modal').classList.add('active');
+  setTimeout(() => { input.focus(); input.select(); }, 100);
+}
+
+function closeEditSubjectModal() {
+  document.getElementById('edit-subject-modal').classList.remove('active');
+}
+
+function confirmEditSubject() {
+  const name = document.getElementById('edit-subject-input').value.trim();
+  if (!name) return;
+  const sub = state.subjects.find(s => s.id === state.activeSubject);
+  if (!sub) return;
+  sub.name = name;
+  save(); closeEditSubjectModal(); render();
+  showToast('Subject renamed!');
+}
+
+// ── Edit Chapter (inline) ─────────────────────────────────────
+function startEditChapter(chapterId, rowEl) {
+  const sub = state.subjects.find(s => s.id === state.activeSubject);
+  if (!sub) return;
+  const ch = sub.chapters.find(c => c.id === chapterId);
+  if (!ch) return;
+
+  // Replace the name span with an input
+  const topRow = rowEl.querySelector('div');
+  const nameSpan = topRow.querySelectorAll('span')[1]; // index 0 = number, 1 = name
+  if (!nameSpan) return;
+
+  const inp = document.createElement('input');
+  inp.className = 'ch-edit-input';
+  inp.value = ch.name;
+  topRow.replaceChild(inp, nameSpan);
+  inp.focus(); inp.select();
+
+  // Hide edit + delete buttons while editing
+  topRow.querySelectorAll('button').forEach(b => b.style.display = 'none');
+
+  // Confirm button
+  const saveBtn = document.createElement('button');
+  saveBtn.textContent = '✓';
+  saveBtn.style.cssText = 'background:#6366f1;border:none;color:#fff;border-radius:6px;padding:3px 10px;cursor:pointer;font-size:14px;flex-shrink:0;';
+  topRow.appendChild(saveBtn);
+
+  // Cancel button
+  const cancelBtn = document.createElement('button');
+  cancelBtn.textContent = '✕';
+  cancelBtn.style.cssText = 'background:transparent;border:1px solid #334155;color:#64748b;border-radius:6px;padding:3px 8px;cursor:pointer;font-size:13px;flex-shrink:0;';
+  topRow.appendChild(cancelBtn);
+
+  function confirmEdit() {
+    const newName = inp.value.trim();
+    if (newName) { ch.name = newName; save(); }
+    renderChapters();
+    showToast('Chapter renamed!');
+  }
+  function cancelEdit() { renderChapters(); }
+
+  saveBtn.onclick = confirmEdit;
+  cancelBtn.onclick = cancelEdit;
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Enter') confirmEdit();
+    if (e.key === 'Escape') cancelEdit();
+  });
+}
+
+load();
+</script>
+</body>
+</html>
